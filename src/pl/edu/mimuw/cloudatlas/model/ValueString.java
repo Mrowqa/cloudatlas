@@ -93,7 +93,11 @@ public class ValueString extends ValueSimple<String> {
 					return new ValueDouble(null);
 				}
 			case DURATION:
-				return new ValueDuration(getValue());
+				try {
+					return new ValueDuration(getValue());
+				} catch(ParseException exception) {
+					return new ValueTime((Long)null);
+				}
 			case INT:
 				try {
 					return new ValueInt(Long.parseLong(getValue()));

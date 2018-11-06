@@ -24,12 +24,30 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Scanner;
+import java.util.TimeZone;
+
 
 /**
  * A class representing duration in milliseconds. The duration can be negative. This is a simple wrapper of a Java
  * <code>Long</code> object.
  */
 public class ValueDuration extends ValueSimple<Long> {
+	/**
+	 * A format of string representing <code>ValueTime</code> when constructing from or converting to a
+	 * <code>String</code> object.
+	 */
+	private static final long MILLISECONDS_IN_DAY = 24L * 60L * 60L * 1000L;
+	private static final DateFormat DURATION_FORMAT;
+	static {
+		DURATION_FORMAT = new SimpleDateFormat("HH:mm:ss.SSS");
+		DURATION_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT"));
+	}
+
 	/**
 	 * Constructs a new <code>ValueDuration</code> object wrapping the specified <code>value</code>.
 	 * 
@@ -41,14 +59,12 @@ public class ValueDuration extends ValueSimple<Long> {
 	
 	@Override
 	public Type getType() {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+		return TypePrimitive.DURATION;
 	}
 	
 	@Override
 	public Value getDefaultValue() {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+		return new ValueDuration(0l);
 	}
 	
 	/**
@@ -114,60 +130,110 @@ public class ValueDuration extends ValueSimple<Long> {
 	 * @param value a textual representation of a duration
 	 * @throws IllegalArgumentException if <code>value</code> does not meet described rules
 	 */
-	public ValueDuration(String value) {
+	public ValueDuration(String value) throws ParseException {
 		this(parseDuration(value));
 	}
 	
-	private static long parseDuration(String value) {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+	private static long parseDuration(String value) throws ParseException {
+		// SimpleDataFormat takes into account "longer" and "shorter" days
+		if (value.charAt(0) != '+' && value.charAt(0) != '-') {
+			throw new ParseException("Invalid sign in \"" + value + "\"", 0);
+		}
+		boolean positive = value.charAt(0) == '+';
+		Scanner sc = new Scanner(value.substring(1));
+		if (!sc.hasNextLong()) {
+			throw new ParseException("Invalid number of days in \"" + value + "\"", 0);
+		}
+		long days = sc.nextLong();
+		String theRest = sc.next();
+		Date date = DURATION_FORMAT.parse(theRest);
+		long time = date.getTime();
+
+		return (days * MILLISECONDS_IN_DAY + time) * (positive ? 1 : -1);
 	}
-	
+
 	@Override
 	public ValueBoolean isLowerThan(Value value) {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+		sameTypesOrThrow(value, Operation.COMPARE);
+		if(isNull() || value.isNull())
+			return new ValueBoolean(null);
+		return new ValueBoolean(getValue() < ((ValueDuration)value).getValue());
 	}
 	
 	@Override
 	public ValueDuration addValue(Value value) {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+		sameTypesOrThrow(value, Operation.ADD);
+		if(isNull() || value.isNull())
+			return new ValueDuration((Long)null);
+		return new ValueDuration(getValue() + ((ValueDuration)value).getValue());
 	}
 	
 	@Override
 	public ValueDuration subtract(Value value) {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+		sameTypesOrThrow(value, Operation.SUBTRACT);
+		if(isNull() || value.isNull())
+			return new ValueDuration((Long)null);
+		return new ValueDuration(getValue() - ((ValueDuration)value).getValue());
 	}
 	
 	@Override
 	public ValueDuration multiply(Value value) {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+		if(!value.getType().isCompatible(TypePrimitive.INTEGER)) // no double so far
+			throw new IncompatibleTypesException(getType(), value.getType(), Operation.MULTIPLY);
+		if(isNull() || value.isNull())
+			return new ValueDuration((Long)null);
+		return new ValueDuration(getValue() * ((ValueInt)value).getValue());
 	}
 	
 	@Override
 	public Value divide(Value value) {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+		if(!value.getType().isCompatible(TypePrimitive.INTEGER)) // no double so far
+			throw new IncompatibleTypesException(getType(), value.getType(), Operation.DIVIDE);
+		if(isNull() || value.isNull())
+			return new ValueDuration((Long)null);
+		return new ValueDuration(getValue() / ((ValueInt)value).getValue());
 	}
 	
 	@Override
 	public ValueDuration modulo(Value value) {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+		if(!value.getType().isCompatible(TypePrimitive.INTEGER)) // no double so far
+			throw new IncompatibleTypesException(getType(), value.getType(), Operation.MODULO);
+		if(isNull() || value.isNull())
+			return new ValueDuration((Long)null);
+		return new ValueDuration(getValue() % ((ValueInt)value).getValue());
 	}
 	
 	@Override
 	public ValueDuration negate() {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+		if(isNull())
+			return new ValueDuration((Long)null);
+		return new ValueDuration(-getValue());
 	}
 	
 	@Override
 	public Value convertTo(Type type) {
-		// TODO
-		throw new UnsupportedOperationException("Not yet implemented");
+		switch(type.getPrimaryType()) {
+			case STRING:
+				if (getValue() == null) {
+					return ValueString.NULL_STRING;
+				}
+				else {
+					char sign = '+';
+					long val = getValue();
+					if (val < 0) {
+						sign = '-';
+						val = -val;
+					}
+
+					long days = val / MILLISECONDS_IN_DAY;
+					long time = val % MILLISECONDS_IN_DAY;
+					String formatted = "" + sign + days + " " + DURATION_FORMAT.format(time);
+					return new ValueString(formatted);
+				}
+			case DURATION:
+				return this;
+			default:
+				throw new UnsupportedConversionException(getType(), type);
+		}
 	}
 }
