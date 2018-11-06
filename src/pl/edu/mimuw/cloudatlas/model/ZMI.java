@@ -27,6 +27,7 @@ package pl.edu.mimuw.cloudatlas.model;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -44,7 +45,7 @@ public class ZMI implements Cloneable {
 	 * Creates a new ZMI with no father (the root zone) and empty sons list.
 	 */
 	public ZMI() {
-		this(null);
+		this(null, null);
 	}
 	
 	/**
@@ -55,10 +56,20 @@ public class ZMI implements Cloneable {
 	 * @param father a father of this ZMI
 	 * @see #addSon(ZMI)
 	 */
-	public ZMI(ZMI father) {
-		this.father = father;
+	public ZMI(ZMI father, String name) {
+		setFather(father);
+		initRequiredAttributes(name);
 	}
 	
+	private void initRequiredAttributes(String name) {
+		attributes.add("level", new ValueInt(null));
+		attributes.add("name", new ValueString(name));
+		attributes.add("owner", new ValueString(null));
+		attributes.add("timestamp", new ValueTime(new Date().getTime()));
+		attributes.add("contacts", new ValueSet(TypePrimitive.CONTACT));
+		attributes.add("cardinality", new ValueInt(null));
+	}
+
 	/**
 	 * Gets a father of this ZMI in a tree.
 	 * 
@@ -143,8 +154,9 @@ public class ZMI implements Cloneable {
 	 */
 	@Override
 	public ZMI clone() {
-		ZMI result = new ZMI(father);
-		result.attributes.add(attributes.clone());
+		String myName = ((ValueString)attributes.get("name")).getValue();
+		ZMI result = new ZMI(father, myName);
+		result.attributes.addOrChange(attributes.clone());
 		for(ZMI son : sons) {
 			ZMI sonClone = son.clone();
 			result.sons.add(sonClone);
@@ -162,5 +174,42 @@ public class ZMI implements Cloneable {
 	@Override
 	public String toString() {
 		return attributes.toString();
+	}
+
+	public void updateAttributes() { // probably should be somewhere else...
+		if (father != null) {
+			ValueInt lvl = (ValueInt)father.getAttributes().get("level");
+			ValueInt myLvl = lvl.addValue(new ValueInt(1L));
+			attributes.addOrChange("level", myLvl);
+
+			ValueString fOwner = (ValueString)father.getAttributes().get("owner");
+			ValueString fName = (ValueString)father.getAttributes().get("name");
+			ValueString myOwner = fOwner.addValue(fName);
+			attributes.addOrChange("owner", myOwner);
+		}
+		else {
+			attributes.addOrChange("level", new ValueInt(0L));
+			attributes.addOrChange("owner", new ValueString(null));
+		}
+
+		ValueInt card = new ValueInt(0L);
+		ValueSet contacts = new ValueSet(TypePrimitive.CONTACT);
+		for (ZMI son : sons) {
+			son.updateAttributes();
+
+			ValueInt sonCard = (ValueInt) son.getAttributes().get("cardinality");
+			ValueSet sonContacts = (ValueSet) son.getAttributes().get("contacts");
+			card = card.addValue(sonCard);
+			if (!sonContacts.isEmpty()) {
+				contacts.add(sonContacts.getValue().iterator().next());
+			}
+		}
+		if (sons.isEmpty()) {
+			card = new ValueInt(1L);
+			contacts = (ValueSet) attributes.get("contacts");
+		}
+
+		attributes.addOrChange("cardinality", card);
+		attributes.addOrChange("contacts", contacts);
 	}
 }
