@@ -24,6 +24,7 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import java.text.ParseException;
 
 import pl.edu.mimuw.cloudatlas.model.Value;
@@ -32,7 +33,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueString;
 /**
  * A class that wraps a Java <code>String</code> object.
  */
-public class ValueString extends ValueSimple<String> {
+public class ValueString extends ValueSimple<String> implements Serializable {
 	/**
 	 * A result of conversion values representing null to <code>ValueString</code>.
 	 */

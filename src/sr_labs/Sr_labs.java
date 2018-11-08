@@ -15,6 +15,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
 
@@ -27,7 +28,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueDouble;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
-//import pl.edu.mimuw.cloudatlas.model.ZMISerde;
+import pl.edu.mimuw.cloudatlas.model.ZMISerde;
 
 /**
  *
@@ -75,18 +76,14 @@ public class Sr_labs {
 		System.out.println(root.toString());
 		System.out.println(roomB.toString());
 		
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		//ZMISerde.SerializeZMI(outputStream, root);
-		outputStream.close();
-		byte[] serialized = outputStream.toByteArray();
+		byte[] serialized = ZMISerde.SerializeZMI(root);
 		
 		System.out.println("---------------------------");
 		System.out.println("len: " + serialized.length + ", content: " + serialized.toString());
 		
-		ByteArrayInputStream inputStream = new ByteArrayInputStream(serialized);
-		//ZMI newRoot = ZMISerde.DeserializeZMI(inputStream);
+		ZMI newRoot = ZMISerde.DeserializeZMI(serialized);
 		
 		System.out.println("---------------------------");
-		//System.out.println(newRoot.toString());
+		System.out.println(newRoot.toString());
 	}
 }

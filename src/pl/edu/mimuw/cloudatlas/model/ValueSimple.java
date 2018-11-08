@@ -24,6 +24,8 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
+
 /**
  * Convenient class for wrapping Java types into <code>Value</code> objects.
  * <p>
@@ -31,7 +33,7 @@ package pl.edu.mimuw.cloudatlas.model;
  * 
  * @param <T> a wrapped type
  */
-abstract class ValueSimple<T> extends Value {
+abstract class ValueSimple<T> extends Value implements Serializable {
 	private T value;
 	
 	/**

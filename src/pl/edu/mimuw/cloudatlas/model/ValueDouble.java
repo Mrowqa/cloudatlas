@@ -24,13 +24,14 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueDouble;
 
 /**
  * A class that wraps a Java <code>Double</code> object.
  */
-public class ValueDouble extends ValueSimple<Double> {
+public class ValueDouble extends ValueSimple<Double> implements Serializable {
 	/**
 	 * Constructs a new <code>ValueDouble</code> object wrapping the specified <code>value</code>.
 	 * 

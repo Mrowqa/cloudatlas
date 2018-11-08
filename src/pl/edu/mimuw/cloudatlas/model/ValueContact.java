@@ -24,6 +24,7 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 
 import pl.edu.mimuw.cloudatlas.model.Value;
@@ -35,7 +36,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueContact;
  * <p>
  * This class is immutable.
  */
-public class ValueContact extends Value {
+public class ValueContact extends Value implements Serializable {
 	private final PathName name;
 	private final InetAddress address;
 	
