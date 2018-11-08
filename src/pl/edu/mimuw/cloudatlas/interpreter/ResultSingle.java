@@ -50,6 +50,11 @@ class ResultSingle extends Result {
 	protected Result callMe(BinaryOperation operation, Result left) {
 		return left.binaryOperationTyped(operation, this);
 	}
+	
+	@Override
+	public Result transformOperation(TransformOperation operation) {
+		throw new UnsupportedOperationException("Not a List Result nor Column result.");
+	}
 
 	@Override
 	public Value getValue() {
@@ -99,5 +104,10 @@ class ResultSingle extends Result {
 	@Override
 	public Type getType() {
 		return value.getType();
+	}
+
+	@Override
+	public ResultSingle aggregationOperation(AggregationOperation operation) {
+		throw new UnsupportedOperationException("Not a List Result nor Column Result.");
 	}
 }

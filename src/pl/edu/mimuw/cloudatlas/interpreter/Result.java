@@ -149,13 +149,9 @@ abstract class Result {
 
 	public abstract ValueList getColumn();
 
-	public ResultSingle aggregationOperation(AggregationOperation operation) {
-		return new ResultSingle(operation.perform(getColumn())); // TODO review
-	}
-
-	public Result transformOperation(TransformOperation operation) {
-		return new ResultList(operation.perform(getColumn()));
-	}
+	public abstract ResultSingle aggregationOperation(AggregationOperation operation);
+	
+	public abstract Result transformOperation(TransformOperation operation);
 
 	public Result isEqual(Result right) {
 		return right.callMe(IS_EQUAL, this);

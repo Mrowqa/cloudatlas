@@ -28,14 +28,14 @@ package pl.edu.mimuw.cloudatlas.interpreter;
 import pl.edu.mimuw.cloudatlas.model.Type;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 
-class ResultList extends ResultColection {
-	public ResultList(ValueList values) {
+class ResultColumn extends ResultColection {
+	public ResultColumn(ValueList values) {
 		super(values);
 	}
 
 	@Override
-	public ResultList unaryOperation(UnaryOperation operation) {
-		return new ResultList(unaryOperationHelper(operation));
+	public ResultColumn unaryOperation(UnaryOperation operation) {
+		return new ResultColumn(unaryOperationHelper(operation));
 	}
 
 	@Override
@@ -50,32 +50,32 @@ class ResultList extends ResultColection {
 
 	@Override
 	public Result filterNulls() {
-		return new ResultList(filterNullsHelper());
+		return new ResultColumn(filterNullsHelper());
 	}
 
 	// TODO check value.isNull and value.isEmpty diff in first and last functions
 	@Override
 	public Result first(int size) {
-		return new ResultList(firstHelper(size));
+		return new ResultColumn(firstHelper(size));
 	}
 
 	@Override
 	public Result last(int size) {
-		return new ResultList(lastHelper(size));
+		return new ResultColumn(lastHelper(size));
 	}
 
 	@Override
 	public Result random(int size) {
-		return new ResultList(randomHelper(size));
+		return new ResultColumn(randomHelper(size));
 	}
 
 	@Override
 	public Result convertTo(Type to) {
-		return new ResultList(convertToHelper(to));
+		return new ResultColumn(convertToHelper(to));
 	}
 
 	@Override
 	protected Result binaryOperationTyped(BinaryOperation operation, ResultSingle right) {
-		return new ResultList(binaryOperationTypedHelper(operation, right));
+		return new ResultColumn(binaryOperationTypedHelper(operation, right));
 	}
 }
