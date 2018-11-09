@@ -23,7 +23,7 @@ import java.io.ObjectOutputStream;
  *
  * @author mrowqa
  */
-public class ZMISerde {
+public class ZMISerializer {
 	public static byte [] SerializeZMI(ZMI zmi) {
 		try {
 			ByteArrayOutputStream out1 = new ByteArrayOutputStream();

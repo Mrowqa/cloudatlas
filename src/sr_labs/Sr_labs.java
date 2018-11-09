@@ -28,7 +28,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueDouble;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
-import pl.edu.mimuw.cloudatlas.model.ZMISerde;
+import pl.edu.mimuw.cloudatlas.model.ZMISerializer;
 
 /**
  *
@@ -76,12 +76,12 @@ public class Sr_labs {
 		System.out.println(root.toString());
 		System.out.println(roomB.toString());
 		
-		byte[] serialized = ZMISerde.SerializeZMI(root);
+		byte[] serialized = ZMISerializer.SerializeZMI(root);
 		
 		System.out.println("---------------------------");
 		System.out.println("len: " + serialized.length + ", content: " + serialized.toString());
 		
-		ZMI newRoot = ZMISerde.DeserializeZMI(serialized);
+		ZMI newRoot = ZMISerializer.DeserializeZMI(serialized);
 		
 		System.out.println("---------------------------");
 		System.out.println(newRoot.toString());
