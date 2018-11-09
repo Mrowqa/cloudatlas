@@ -40,12 +40,12 @@ class ResultList extends ResultColection {
 
 	@Override
 	public ValueList getList() {
-		throw new UnsupportedOperationException("Not a List Result.");
+		return values;
 	}
 
 	@Override
 	public ValueList getColumn() {
-		return values;
+		throw new UnsupportedOperationException("Not a Column Result.");
 	}
 
 	@Override
@@ -70,7 +70,7 @@ class ResultList extends ResultColection {
 
 	@Override
 	protected Result binaryOperationTyped(BinaryOperation operation, ResultColumn right) {
-		return new ResultList(binaryOperationTypedHelper(operation, right.getList()));
+		throw new UnsupportedOperationException("BinaryOperation not supported for ResultList and ResultColumn.");
 	}
 
 	@Override

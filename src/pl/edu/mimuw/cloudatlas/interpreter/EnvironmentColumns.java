@@ -41,7 +41,7 @@ class EnvironmentColumns extends Environment {
 		try {
 			return new ResultColumn(((ValueList)row.getIth(columns.get(ident))));
 		} catch(NullPointerException exception) {
-			return new ResultSingle(ValueNull.getInstance());
+			throw new NoSuchAttributeException(ident);
 		}
 	}
 }
