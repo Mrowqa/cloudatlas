@@ -206,52 +206,22 @@ abstract class Result {
 	}
 
 	protected static ValueList filterNullsList(ValueList list) {
-		List<Value> result = new ArrayList<Value>();
-		if(list.isEmpty())
-			return new ValueList(result, ((TypeCollection)list.getType()).getElementType());
+		if(list.isNull() || list.isEmpty()) {
+			return list;
+		}
+		List<Value> result = new ArrayList<>();
 		for(Value v : list)
 			if(!v.isNull())
 				result.add(v);
-		return new ValueList(result.isEmpty()? null : result, ((TypeCollection)list.getType()).getElementType());
+		Type elementType = ((TypeCollection)list.getType()).getElementType();
+		return new ValueList(result.isEmpty()? null : result, elementType);
 	}
 
 	public abstract Result filterNulls();
 
-	protected static ValueList firstList(ValueList list, int size) {
-		ValueList nlist = filterNullsList(list);
-		if(nlist.getValue() == null)
-			return nlist;
-		List<Value> result = new ArrayList<Value>(size);
-		int i = 0;
-		for(Value v : nlist) {
-			result.add(v);
-			if(++i == size)
-				break;
-		}
-		return new ValueList(result, ((TypeCollection)list.getType()).getElementType());
-	}
-
 	public abstract Result first(int size);
 
-	protected static ValueList lastList(ValueList list, int size) {
-		ValueList nlist = filterNullsList(list);
-		if(nlist.getValue() == null)
-			return nlist;
-		List<Value> result = new ArrayList<Value>(size);
-		for(int i = Math.max(0, list.size() - size); i < list.size(); ++i)
-			result.add(list.get(i));
-		return new ValueList(result, ((TypeCollection)list.getType()).getElementType());
-	}
-
 	public abstract Result last(int size);
-
-	protected static ValueList randomList(ValueList list, int size) {
-		ValueList nlist = filterNullsList(list);
-		if(nlist.getValue() == null || list.size() <= size)
-			return nlist;
-		Collections.shuffle(nlist);
-		return new ValueList(nlist.getValue().subList(0, size), ((TypeCollection)list.getType()).getElementType());
-	}
 
 	public abstract Result random(int size);
 

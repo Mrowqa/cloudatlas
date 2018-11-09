@@ -26,6 +26,8 @@
 package pl.edu.mimuw.cloudatlas.interpreter;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import pl.edu.mimuw.cloudatlas.model.Type;
 import pl.edu.mimuw.cloudatlas.model.TypeCollection;
@@ -63,63 +65,45 @@ abstract class ResultColection extends Result {
 		Type new_elem_type = newValues.get(0).getType();
 		return new ValueList(newValues, new_elem_type);
 	}
-
-	protected ValueList filterNullsHelper() {
-		if (values.isNull() || values.isEmpty()) {
-			return values;
-		}
-		ValueList newValues = new ValueList(new ArrayList<Value>(),
-				((TypeCollection) values.getType()).getElementType());
-		for (Value value : values) {
-			if (!value.isNull()) {
-				newValues.add(value);
-			}
-		}
-		return newValues;
-	}
-
-	// TODO check value.isNull and value.isEmpty diff in first and last functions
+		
 	@Override
 	public Result first(int size) {
-		if (values.isNull() || values.isEmpty() || size <= 0) {
-			return new ResultSingle(new ValueList(null));
+		ValueList nlist = filterNullsList(values);
+		if(nlist.getValue() == null)
+			return new ResultSingle(nlist);
+		List<Value> result = new ArrayList<>(size);
+		int i = 0;
+		for(Value v : nlist) {
+			result.add(v);
+			if(++i == size)
+				break;
 		}
-		if (size >= values.size()) {
-			return new ResultSingle(values);
-		}
-		ArrayList<Value> newValues = new ArrayList<>(values.subList(0, size));
-		return new ResultSingle(new ValueList(newValues, ((TypeCollection)values.getType()).getElementType()));
+		return new ResultSingle(new ValueList(result, ((TypeCollection)nlist.getType()).getElementType()));
 	}
-
+	
+	// TODO check value.isNull and value.isEmpty diff in first and last functions
 	@Override
 	public Result last(int size) {
-		if (values.isNull() || values.isEmpty() || size <= 0) {
-			return new ResultSingle(new ValueList(null));
-		}
-		if (size >= values.size()) {
-			return new ResultSingle(values);
-		}
-		ArrayList<Value> new_list = new ArrayList<>(values.subList(values.size() - size, values.size()));
-		return new ResultSingle(new ValueList(new_list, ((TypeCollection)values.getType()).getElementType()));
+		ValueList nlist = filterNullsList(values);
+		if(nlist.getValue() == null)
+			return new ResultSingle(nlist);
+		List<Value> result = new ArrayList<>(size);
+		for(int i = Math.max(0, nlist.size() - size); i < nlist.size(); ++i)
+			result.add(nlist.get(i));
+		Type elementType = ((TypeCollection)nlist.getType()).getElementType();
+		return new ResultSingle(new ValueList(result, elementType));
 	}
 	
 	@Override
 	public Result random(int size) {
-		if (values.isNull() || values.isEmpty() || size <= 0) {
-			return new ResultSingle(new ValueList(null));
-		}
-		if (size >= values.size()) {
-			return new ResultSingle(values);
-		}
-		ValueList newValues = new ValueList(new ArrayList<Value>(), 
-				((TypeCollection)values.getType()).getElementType());
-		newValues.addAll(values);
-		for (int i = size; i < values.size(); i++) {
-			int index = ThreadLocalRandom.current().nextInt(0, newValues.size());
-			newValues.remove(index);
-		}
-		return new ResultSingle(newValues);
+		ValueList nlist = filterNullsList(values);
+		if(nlist.getValue() == null || nlist.size() <= size)
+			return new ResultSingle(nlist);
+		Collections.shuffle(nlist);
+		Type elementType = ((TypeCollection)nlist.getType()).getElementType();
+		return new ResultSingle(new ValueList(nlist.getValue().subList(0, size), elementType));
 	}
+
 
 	protected ValueList convertToHelper(Type to) {
 		// TODO check if type is convertible to

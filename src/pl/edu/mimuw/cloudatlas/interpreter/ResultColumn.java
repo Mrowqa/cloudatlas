@@ -50,7 +50,7 @@ class ResultColumn extends ResultColection {
 
 	@Override
 	public Result filterNulls() {
-		return new ResultColumn(filterNullsHelper());
+		return new ResultColumn(filterNullsList(values));
 	}
 
 	@Override
