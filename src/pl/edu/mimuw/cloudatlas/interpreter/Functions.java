@@ -77,8 +77,12 @@ class Functions {
 	private static final UnaryOperation CEIL = new UnaryOperation() {
 		@Override
 		public Value perform(Value v) {
-			// TODO
-			throw new UnsupportedOperationException("Not yet implemented");
+			if(v.getType().isCompatible(TypePrimitive.DOUBLE)) {
+				if(v.isNull())
+					return new ValueDouble(null);
+				return new ValueDouble((double)Math.ceil(((ValueDouble)v).getValue()));
+			}
+			throw new IllegalArgumentException("Value must have type " + TypePrimitive.DOUBLE + ".");
 		}
 	};
 
@@ -96,8 +100,25 @@ class Functions {
 	private static final AggregationOperation SUM = new AggregationOperation() {
 		@Override
 		public Value perform(ValueList values) {
-			// TODO
-			throw new UnsupportedOperationException("Not yet implemented");
+			Type elementType = ((TypeCollection)values.getType()).getElementType();
+			PrimaryType primaryType = elementType.getPrimaryType();
+
+			if(primaryType != PrimaryType.INT && primaryType != PrimaryType.DOUBLE && primaryType != PrimaryType.DURATION
+					&& primaryType != PrimaryType.NULL) {
+				throw new IllegalArgumentException("Aggregation doesn't support type: " + elementType + ".");
+			}
+
+			ValueList nlist = Result.filterNullsList(values);
+			if(nlist.getValue() == null || nlist.isEmpty()) {
+				return ValueNull.getInstance();
+			}
+
+			Value result = nlist.get(0).getDefaultValue();
+
+			for(Value v : nlist) {
+				result = result.addValue(v);
+			}
+			return result;
 		}
 	};
 
@@ -151,8 +172,20 @@ class Functions {
 	private static final AggregationOperation OR = new AggregationOperation() {
 		@Override
 		public ValueBoolean perform(ValueList values) { // lazy
-			// TODO
-			throw new UnsupportedOperationException("Not yet implemented");
+			ValueList nlist = Result.filterNullsList(values);
+			if(nlist.getValue() == null) {
+				return new ValueBoolean(null);
+			} else if(values.isEmpty()) {
+				return new ValueBoolean(false);
+			}
+			for(Value v : nlist) {
+				if(v.getType().isCompatible(TypePrimitive.BOOLEAN)) {
+					if(!v.isNull() && ((ValueBoolean)v).getValue())
+						return new ValueBoolean(true);
+				} else
+					throw new IllegalArgumentException("Aggregation doesn't support type: " + v.getType() + ".");
+			}
+			return new ValueBoolean(true);
 		}
 	};
 

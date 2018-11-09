@@ -53,7 +53,7 @@ abstract class Result {
 		@Override
 		public Value perform(Value v1, Value v2) {
 			return v1.isEqual(v2);
-		}
+		}		
 	};
 
 	private static final BinaryOperation IS_LOWER_THAN = new BinaryOperation() {
@@ -134,6 +134,10 @@ abstract class Result {
 	};
 
 	protected abstract Result binaryOperationTyped(BinaryOperation operation, ResultSingle right);
+	
+	protected abstract Result binaryOperationTyped(BinaryOperation operation, ResultColumn right);
+		
+	protected abstract Result binaryOperationTyped(BinaryOperation operation, ResultList right);
 
 	public Result binaryOperation(BinaryOperation operation, Result right) {
 		return right.callMe(operation, this);

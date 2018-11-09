@@ -171,7 +171,6 @@ public class Interpreter {
 					throw new InsideQueryException(PrettyPrinter.print(selItem), exception);
 				}
 			}
-
 			return ret;
 		}
 	}
@@ -280,13 +279,13 @@ public class Interpreter {
 
 	public class SelItemInterpreter implements SelItem.Visitor<QueryResult, Table> {
 		public QueryResult visit(SelItemC selItem, Table table) {
-			Environment env = null;
+			Environment env = table.createEnvironment();
 			Result result = selItem.condexpr_.accept(new CondExprInterpreter(), env);
 			return new QueryResult(result.getValue());
 		}
 
 		public QueryResult visit(AliasedSelItemC selItem, Table table) {
-			Environment env = null; // TODO
+			Environment env = table.createEnvironment();
 			Result result = selItem.condexpr_.accept(new CondExprInterpreter(), env);
 			return new QueryResult(new Attribute(selItem.qident_), result.getValue());
 		}

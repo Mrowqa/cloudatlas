@@ -53,29 +53,28 @@ class ResultList extends ResultColection {
 		return new ResultList(filterNullsHelper());
 	}
 
-	// TODO check value.isNull and value.isEmpty diff in first and last functions
-	@Override
-	public Result first(int size) {
-		return new ResultList(firstHelper(size));
-	}
-
-	@Override
-	public Result last(int size) {
-		return new ResultList(lastHelper(size));
-	}
-
-	@Override
-	public Result random(int size) {
-		return new ResultList(randomHelper(size));
-	}
-
 	@Override
 	public Result convertTo(Type to) {
 		return new ResultList(convertToHelper(to));
 	}
 
 	@Override
+	protected Result callMe(BinaryOperation operation, Result left) {
+		return left.binaryOperationTyped(operation, this);
+	}
+	
+	@Override
 	protected Result binaryOperationTyped(BinaryOperation operation, ResultSingle right) {
 		return new ResultList(binaryOperationTypedHelper(operation, right));
+	}
+
+	@Override
+	protected Result binaryOperationTyped(BinaryOperation operation, ResultColumn right) {
+		return new ResultList(binaryOperationTypedHelper(operation, right.getList()));
+	}
+
+	@Override
+	protected Result binaryOperationTyped(BinaryOperation operation, ResultList right) {
+		throw new UnsupportedOperationException("BinaryOperations are not suported for pair of ResultList.");
 	}
 }

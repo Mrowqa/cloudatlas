@@ -24,7 +24,9 @@
 
 package pl.edu.mimuw.cloudatlas.interpreter;
 
+import java.util.ArrayList;
 import pl.edu.mimuw.cloudatlas.model.Type;
+import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueBoolean;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
@@ -41,6 +43,17 @@ class ResultSingle extends Result {
 		return new ResultSingle(operation.perform(value, right.value));
 	}
 
+	// TODO get type if resultColumn or list empty
+	@Override
+	protected Result binaryOperationTyped(BinaryOperation operation, ResultColumn right) {
+		return new ResultColumn(binaryOperationTypedHelper(operation, right.getColumn()));
+	}
+	
+	@Override
+	protected Result binaryOperationTyped(BinaryOperation operation, ResultList right) {
+		return new ResultColumn(binaryOperationTypedHelper(operation, right.getList()));
+	}
+	
 	@Override
 	public ResultSingle unaryOperation(UnaryOperation operation) {
 		return new ResultSingle(operation.perform(value));
@@ -109,5 +122,14 @@ class ResultSingle extends Result {
 	@Override
 	public ResultSingle aggregationOperation(AggregationOperation operation) {
 		throw new UnsupportedOperationException("Not a List Result nor Column Result.");
+	}
+
+	private ValueList binaryOperationTypedHelper(BinaryOperation operation, ValueList right_values) {
+		ArrayList<Value> new_values = new ArrayList<>();
+		for (Value right_value : right_values) {
+			new_values.add(operation.perform(value, right_value));
+		}
+		Type new_type = new_values.isEmpty() ? TypePrimitive.NULL : new_values.get(0).getType();
+		return new ValueList(new_values, new_type);
 	}
 }
