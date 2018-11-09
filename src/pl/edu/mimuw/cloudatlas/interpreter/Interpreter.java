@@ -280,7 +280,7 @@ public class Interpreter {
 
 	public class SelItemInterpreter implements SelItem.Visitor<QueryResult, Table> {
 		public QueryResult visit(SelItemC selItem, Table table) {
-			Environment env = null; // TODO
+			Environment env = null;
 			Result result = selItem.condexpr_.accept(new CondExprInterpreter(), env);
 			return new QueryResult(result.getValue());
 		}

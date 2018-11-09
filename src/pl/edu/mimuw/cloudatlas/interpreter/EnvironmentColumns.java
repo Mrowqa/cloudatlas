@@ -27,23 +27,19 @@ package pl.edu.mimuw.cloudatlas.interpreter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import pl.edu.mimuw.cloudatlas.model.ValueList;
 
 import pl.edu.mimuw.cloudatlas.model.ValueNull;
 
-class Environment {
-	protected final TableRow row;
-	protected final Map<String, Integer> columns = new HashMap<String, Integer>();
-
-	public Environment(TableRow row, List<String> columns) {
-		this.row = row;
-		int i = 0;
-		for(String c : columns)
-			this.columns.put(c, i++);
+class EnvironmentColumns extends Environment {
+	public EnvironmentColumns(TableRow row, List<String> columns) {
+		super(row, columns);
 	}
-
+	
+	@Override
 	public Result getIdent(String ident) {
 		try {
-			return new ResultSingle(row.getIth(columns.get(ident)));
+			return new ResultColumn(((ValueList)row.getIth(columns.get(ident))));
 		} catch(NullPointerException exception) {
 			return new ResultSingle(ValueNull.getInstance());
 		}
