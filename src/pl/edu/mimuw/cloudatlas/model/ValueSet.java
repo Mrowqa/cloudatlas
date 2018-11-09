@@ -24,6 +24,7 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,7 +45,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueSet;
  * 
  * @see java.util.Set
  */
-public class ValueSet extends ValueSimple<Set<Value>> implements Set<Value> {
+public class ValueSet extends ValueSimple<Set<Value>> implements Set<Value>, Serializable {
 	private TypeCollection type;
 	
 	/**

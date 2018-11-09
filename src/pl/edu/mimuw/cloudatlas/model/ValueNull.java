@@ -24,6 +24,7 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueNull;
 
@@ -33,7 +34,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueNull;
  * @see TypePrimitve#NULL
  * @see Type#isCompatible(Value)
  */
-public class ValueNull extends Value {
+public class ValueNull extends Value implements Serializable {
 	private static ValueNull instance = null;
 	
 	private ValueNull() {}

@@ -24,6 +24,7 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -45,7 +46,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueList;
  * 
  * @see java.util.List
  */
-public class ValueList extends ValueSimple<List<Value>> implements List<Value> {
+public class ValueList extends ValueSimple<List<Value>> implements List<Value>, Serializable {
 	private TypeCollection type;
 	
 	/**

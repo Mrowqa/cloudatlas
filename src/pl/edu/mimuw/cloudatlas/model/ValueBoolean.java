@@ -24,13 +24,14 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueBoolean;
 
 /**
  * A class that wraps a Java <code>Boolean</code> object.
  */
-public class ValueBoolean extends ValueSimple<Boolean> {
+public class ValueBoolean extends ValueSimple<Boolean> implements Serializable {
 	/**
 	 * Constructs a new <code>ValueBoolean</code> object wrapping the specified <code>value</code>.
 	 * 

@@ -24,6 +24,7 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import java.util.Collection;
 
 import pl.edu.mimuw.cloudatlas.model.Type;
@@ -36,7 +37,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueNull;
  * 
  * @see TypePrimitve
  */
-public class TypeCollection extends Type {
+public class TypeCollection extends Type implements Serializable {
 	private final Type elementType;
 	
 	/**

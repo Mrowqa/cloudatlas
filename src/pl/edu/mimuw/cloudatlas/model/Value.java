@@ -24,12 +24,13 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import pl.edu.mimuw.cloudatlas.model.Value;
 
 /**
  * A single value stored as an attribute.
  */
-public abstract class Value {
+public abstract class Value implements Serializable {
 	/**
 	 * An operation that may be performed on values.
 	 */

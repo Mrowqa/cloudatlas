@@ -24,6 +24,7 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -36,7 +37,7 @@ import java.util.TimeZone;
  * A class representing duration in milliseconds. The duration can be negative. This is a simple wrapper of a Java
  * <code>Long</code> object.
  */
-public class ValueDuration extends ValueSimple<Long> {
+public class ValueDuration extends ValueSimple<Long> implements Serializable {
 	/**
 	 * A format of string representing <code>ValueTime</code> when constructing from or converting to a
 	 * <code>String</code> object.

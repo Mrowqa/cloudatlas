@@ -24,12 +24,14 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
+
 /**
  * Convenient class for types that just wrap ordinary Java types.
  * 
  * @see TypeCollection
  */
-public class TypePrimitive extends Type {
+public class TypePrimitive extends Type implements Serializable {
 	/**
 	 * Boolean type.
 	 */
