@@ -43,7 +43,6 @@ class ResultSingle extends Result {
 		return new ResultSingle(operation.perform(value, right.value));
 	}
 
-	// TODO get type if resultColumn or list empty
 	@Override
 	protected Result binaryOperationTyped(BinaryOperation operation, ResultColumn right) {
 		return new ResultColumn(binaryOperationTypedHelper(operation, right.getColumn()));
@@ -124,12 +123,12 @@ class ResultSingle extends Result {
 		throw new UnsupportedOperationException("Not a List Result nor Column Result.");
 	}
 
-	private ValueList binaryOperationTypedHelper(BinaryOperation operation, ValueList right_values) {
-		ArrayList<Value> new_values = new ArrayList<>();
-		for (Value right_value : right_values) {
-			new_values.add(operation.perform(value, right_value));
+	private ValueList binaryOperationTypedHelper(BinaryOperation operation, ValueList rightValues) {
+		ArrayList<Value> newValues = new ArrayList<>();
+		for (Value rightValue : rightValues) {
+			newValues.add(operation.perform(value, rightValue));
 		}
-		Type new_type = new_values.isEmpty() ? TypePrimitive.NULL : new_values.get(0).getType();
-		return new ValueList(new_values, new_type);
+		Type newType = newValues.isEmpty() ? TypePrimitive.NULL : newValues.get(0).getType();
+		return new ValueList(newValues, newType);
 	}
 }

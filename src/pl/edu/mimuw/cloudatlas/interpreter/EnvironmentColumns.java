@@ -24,13 +24,14 @@
 
 package pl.edu.mimuw.cloudatlas.interpreter;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 
-import pl.edu.mimuw.cloudatlas.model.ValueNull;
-
+/**
+ * Class for evaluating selection items of queries. Environment stores columns as a 
+ * ValueList containing attribute values for ZMI sons.
+ * @author pawel
+ */
 class EnvironmentColumns extends Environment {
 	public EnvironmentColumns(TableRow row, List<String> columns) {
 		super(row, columns);

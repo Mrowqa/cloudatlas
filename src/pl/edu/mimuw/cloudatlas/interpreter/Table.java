@@ -46,14 +46,14 @@ import pl.edu.mimuw.cloudatlas.model.ValueNull;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 
 public class Table implements Iterable<TableRow> {
-	private final List<String> columns = new ArrayList<String>();
+	private final List<String> columns = new ArrayList<>();
 	private final List<Type> columnTypes = new ArrayList<>();
-	private final Map<String, Integer> headersMap = new HashMap<String, Integer>();
-	private final List<TableRow> rows = new ArrayList<TableRow>();
+	private final Map<String, Integer> headersMap = new HashMap<>();
+	private final List<TableRow> rows = new ArrayList<>();
 
 	// creates whole table based on a given ZMI
 	public Table(ZMI zmi) {
-		Set<String> allColumns = new HashSet<String>();
+		Set<String> allColumns = new HashSet<>();
 		for (ZMI z : zmi.getSons()) {
 			for (Entry<Attribute, Value> e : z.getAttributes()) {
 				allColumns.add(e.getKey().getName());
@@ -92,10 +92,13 @@ public class Table implements Iterable<TableRow> {
 		}
 	}
 
-	public Environment createEnvironment() {
+	/**
+	 * @return Environment that maps attribute names to table columns.
+	 */
+	public Environment createColumnEnvironment() {
 		ValueList[] values = new ValueList[columns.size()];
 		for (int i = 0; i < columns.size(); i++) {
-			ValueList value = new ValueList(new ArrayList<Value>(), columnTypes.get(i));
+			ValueList value = new ValueList(new ArrayList<>(), columnTypes.get(i));
 			for (TableRow row : rows)
 				value.add(row.getIth(i));
 			values[i] = value;
@@ -136,7 +139,7 @@ public class Table implements Iterable<TableRow> {
 		}
 		try {
 			int position = headersMap.get(column);
-			List<Value> result = new ArrayList<Value>();
+			List<Value> result = new ArrayList<>();
 			for (TableRow row : rows) {
 				Value v = row.getIth(position);
 				result.add(v);

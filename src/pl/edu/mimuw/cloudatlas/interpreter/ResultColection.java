@@ -55,7 +55,6 @@ abstract class ResultColection extends Result {
 	
 	protected ValueList unaryOperationHelper(UnaryOperation operation) {
 		if (values.isNull() || values.isEmpty()) {
-			// TODO set right ValueList type after performing unary op on empty list.
 			return values;
 		}
 		ArrayList<Value> newValues = new ArrayList<>();
@@ -81,7 +80,6 @@ abstract class ResultColection extends Result {
 		return new ResultSingle(new ValueList(result, ((TypeCollection)nlist.getType()).getElementType()));
 	}
 	
-	// TODO check value.isNull and value.isEmpty diff in first and last functions
 	@Override
 	public Result last(int size) {
 		ValueList nlist = filterNullsList(values);
@@ -104,10 +102,8 @@ abstract class ResultColection extends Result {
 		return new ResultSingle(new ValueList(nlist.getValue().subList(0, size), elementType));
 	}
 
-
 	protected ValueList convertToHelper(Type to) {
-		// TODO check if type is convertible to
-		ValueList newValues = new ValueList(new ArrayList<Value>(), to);
+		ValueList newValues = new ValueList(new ArrayList<>(), to);
 		for (Value value : values) {
 			newValues.add(value.convertTo(to));
 		}
@@ -121,11 +117,10 @@ abstract class ResultColection extends Result {
 
 	@Override
 	public Type getType() {
-		return ((TypeCollection) values.getType()).getElementType(); // TODO check if not collection type.
+		return ((TypeCollection) values.getType()).getElementType();
 	}
 
 	protected ValueList binaryOperationTypedHelper(BinaryOperation operation, ResultSingle right) {
-		// TODO Is operation typed? what with nulls in the list
 		if (right.getValue().isNull()) {
 			throw new UnsupportedOperationException("Binary operation on Resutl{List, Column} and ResultSingle being null not supported.");
 		}

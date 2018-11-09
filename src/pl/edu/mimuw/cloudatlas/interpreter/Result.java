@@ -25,7 +25,6 @@
 package pl.edu.mimuw.cloudatlas.interpreter;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import pl.edu.mimuw.cloudatlas.model.Type;
 import pl.edu.mimuw.cloudatlas.model.TypeCollection;
@@ -210,9 +209,11 @@ abstract class Result {
 			return list;
 		}
 		List<Value> result = new ArrayList<>();
-		for(Value v : list)
-			if(!v.isNull())
+		for(Value v : list) {
+			if(!v.isNull()) {
 				result.add(v);
+			}
+		}
 		Type elementType = ((TypeCollection)list.getType()).getElementType();
 		return new ValueList(result.isEmpty()? null : result, elementType);
 	}
