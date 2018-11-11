@@ -11,10 +11,14 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import pl.edu.mimuw.cloudatlas.agent.CloudAtlasAgent;
+import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
@@ -22,6 +26,7 @@ import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.ValueDuration;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
+import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueBoolean;
 import pl.edu.mimuw.cloudatlas.model.ValueContact;
 import pl.edu.mimuw.cloudatlas.model.ValueDouble;
@@ -40,12 +45,8 @@ public class Sr_labs {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws ParseException, UnknownHostException, IOException {
-        // TODO code application logic here
-		
-		testSerialize();
-		//ValueDuration b = new ValueDuration("-2 23:00:00.005");
-		//System.out.println(((ValueString)b.convertTo(TypePrimitive.STRING)).getValue());
-    }
+		testCloudAtlasAgent();
+	}
 	
 	private static void testSerialize() throws ParseException, UnknownHostException, IOException {
 		ZMI root = new ZMI();
@@ -85,5 +86,20 @@ public class Sr_labs {
 		
 		System.out.println("---------------------------");
 		System.out.println(newRoot.toString());
+	}
+	
+	private static void testCloudAtlasAgent() {
+		try {
+            Registry registry = LocateRegistry.getRegistry("localhost");
+            CloudAtlasInterface stub = (CloudAtlasInterface) registry.lookup("CloudAtlas");
+			ValueList result = stub.getZones();
+			System.out.println("Got result");
+			for (Value val : result) {
+				System.out.println(val);
+			}
+        } catch (Exception e) {
+            System.err.println("CloudAtlas exception:");
+            e.printStackTrace();
+        }
 	}
 }

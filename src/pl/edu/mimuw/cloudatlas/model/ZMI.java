@@ -170,6 +170,27 @@ public class ZMI implements Cloneable, Serializable {
 		return result;
 	}
 	
+	// TODO use class Path to simplify the code.
+	// TODO does addValue make copy
+	public ValueList getZones() {
+		ValueList result = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
+		ValueString name = (ValueString)attributes.get("name");
+		if (name.isNull()) {
+			name = new ValueString("/");
+			result.add(name);
+		} else {
+			result.add(name);
+			name = name.addValue(new ValueString("/"));
+		}
+		for (ZMI son : sons) {
+			ValueList zones = son.getZones();
+			for (Value zone : zones) {
+				result.add(name.addValue(zone));
+			}
+		}
+		return result;
+	}
+	
 	/**
 	 * Prints a textual representation of this ZMI. It contains only attributes of this node.
 	 * 
