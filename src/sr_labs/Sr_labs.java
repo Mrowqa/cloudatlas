@@ -18,6 +18,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Scanner;
 import javafx.util.Pair;
@@ -99,34 +100,64 @@ public class Sr_labs {
             CloudAtlasInterface stub = (CloudAtlasInterface) registry.lookup("CloudAtlas");
 			Scanner scanner = new Scanner(System.in);
 			scanner.useDelimiter("\\n");
-			System.out.println("Option 0 - install query, 1 - uninstall query, 2 - get zones, 3 - get zone attributes");
+			printTestCloudAtlasMenu();
 			while(scanner.hasNext()) {
 				int op = scanner.nextInt();
 				String arg;
 				try {
 				switch (op) {
-					case 0: 
-						System.out.println("Enter query:");
-						arg = scanner.next();
-						stub.installQuery(new ValueString(arg));
-						break;
-					case 1:
-						System.out.println("Enter query:");
-						arg = scanner.next();
-						stub.uninstallQuery(new ValueString(arg));
-						break;
-					case 2: 
+					case 1: 
 						ValueList zones = stub.getZones();
 						for (Value zone : zones) {
 							System.out.println(((ValueString)zone).getValue());
 						}
 						break;
-					case 3: 
+					case 2: 
 						System.out.println("Enter zone:");
 						arg = scanner.next();
 						AttributesMap map = stub.getAttributes(new ValueString(arg));
 						for (Entry<Attribute, Value> entry : map) {
 							System.out.println(entry.getKey() + ": " + entry.getValue());
+						}
+						break;	
+					case 3:
+						System.out.println("Enter zone:");
+						arg = scanner.next();
+						System.out.println("Enter attribute:");
+						ValueString attribute = new ValueString(scanner.next());
+						System.out.println("Enter value (only ValueString)");
+						ValueString value = new ValueString(scanner.next());
+						stub.setValue(new ValueString(arg), attribute, value);
+						System.out.println("Value set.");
+						break;
+					case 4: 
+						System.out.println("Enter query:");
+						arg = scanner.next();
+						stub.installQuery(new ValueString(arg));
+						System.out.println("Query installed.");
+						break;
+					case 5:
+						System.out.println("Enter query:");
+						arg = scanner.next();
+						stub.uninstallQuery(new ValueString(arg));
+						System.out.println("Query uninstalled.");
+						break;
+					case 6:
+						System.out.println("Enter number of contacts:");
+						int n = scanner.nextInt();
+						ValueSet contacts = new ValueSet(new HashSet<>(), TypePrimitive.STRING);
+						System.out.println("Enter all contacts each in a new line.");
+						for (int i = 0; i < n; i++) {
+							contacts.add(new ValueString(scanner.next()));
+						}
+						stub.setFallbackContacts(contacts);
+						System.out.println("Fallback contacts set.");
+						break;
+					case 7:
+						ValueSet contacts1 = stub.getFallbackContacts();
+						System.out.println("Fallback contacts:");
+						for (Value contact : contacts1) {
+							System.out.println(contact);
 						}
 						break;
 					default:
@@ -141,5 +172,16 @@ public class Sr_labs {
             System.err.println("CloudAtlas exception:");
             e.printStackTrace();
         }
+	}
+	
+	private static void printTestCloudAtlasMenu() {
+		System.out.println("1: Get zones.");
+		System.out.println("2: Get attributes.");
+		System.out.println("3: Set value for an attribute.");
+		System.out.println("4: Install query.");
+		System.out.println("5: Uninstall query.");
+		System.out.println("6: Set fallback contacts.");
+		System.out.println("7: Get fallback contacts.");
+		System.out.println("Default: exit.");
 	}
 }

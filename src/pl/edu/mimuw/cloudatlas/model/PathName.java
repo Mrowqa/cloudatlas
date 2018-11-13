@@ -115,7 +115,11 @@ public class PathName implements Serializable {
 			componentsUp.remove(componentsUp.size() - 1);
 		return new PathName(componentsUp);
 	}
-	
+
+	/**
+	 * Returns shorter path by the first component, e.g. for path /foo/bar returns /bar.
+	 * For the root zone it returns a new instance of the same zone.
+	 */
 	public PathName consumePrefix() {
 		List<String> newComponents = new ArrayList<>(components);
 		if (!newComponents.isEmpty()) {

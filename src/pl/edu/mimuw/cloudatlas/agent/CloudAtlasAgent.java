@@ -36,6 +36,7 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  *
  * @author pawel
  */
+// TODO consider synchronisation - implement reader/writers monitor
 public class CloudAtlasAgent implements CloudAtlasInterface {
 	private ZMI zmi;
 	private ValueSet fallbackContacts = new ValueSet(new HashSet<Value>(), TypePrimitive.STRING);
@@ -51,7 +52,7 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 
 	@Override
 	public AttributesMap getAttributes(ValueString zone) throws RemoteException {
-		return findZone(zmi, new PathName(zone.getValue())).getAttributes();
+		return findZone(zmi, zone.getValue()).getAttributes();
 	}
 
 	@Override
@@ -59,7 +60,7 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		try {
 			executeQueries(zmi, query.getValue());
 		} catch (Exception ex) {
-			throw new RemoteException("Failed to install query: " + ex.getMessage());
+			throw new RemoteException("Failed to install query, caused by: " + ex.getMessage());
 		}
 	}
 
@@ -76,25 +77,32 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		}
 	}
 
-	// TODO handle exceptions.
-	// TODO consider syncronisation
 	@Override
 	public void setValue(ValueString zone, ValueString attribute, Value value) throws RemoteException {
 		ZMI zoneZmi = findZone(zmi, new PathName(zone.getValue()));
+		if (!zoneZmi.getSons().isEmpty()) {
+			throw new IllegalArgumentException("setValue attribute is only allowed for singleton zone.");
+		}
 		zoneZmi.getAttributes().addOrChange(attribute.getValue(), value);
 	}
 
 	@Override
 	public void setFallbackContacts(ValueSet contacts) throws RemoteException {
 		if (contacts.isNull()) {
-			throw new RemoteException("Fallback contacts set can't be null");
+			throw new IllegalArgumentException("Fallback contacts set can't be null");
 		}
 		Type elementType = ((TypeCollection)contacts.getType()).getElementType();
-		if (elementType != TypePrimitive.STRING) {
-			throw new RemoteException("Illegal set element type. Got " + TypePrimitive.STRING + " expected " + elementType);
+		if (elementType.getPrimaryType() != TypePrimitive.PrimaryType.STRING) {
+			throw new IllegalArgumentException("Illegal set element type. Got " + TypePrimitive.STRING + " expected " + elementType);
 		}
 		fallbackContacts = contacts;
 	}
+	
+	@Override
+	public ValueSet getFallbackContacts() throws RemoteException {
+		return fallbackContacts;
+	}
+
 	
 	private static void removeAttributes(ZMI zmi, Set<String> attributes) {
 		if (!zmi.getSons().isEmpty()) {
@@ -122,6 +130,10 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		}
 	}
 
+	private ZMI findZone(ZMI zmi, String name) throws RemoteException {
+		return findZone(zmi, new PathName(name));
+	}
+	
 	private ZMI findZone(ZMI zmi, PathName pathName) throws RemoteException {
 		if (pathName.getComponents().isEmpty()) {
 			return zmi;
