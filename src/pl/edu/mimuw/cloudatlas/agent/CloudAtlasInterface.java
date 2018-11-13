@@ -8,6 +8,7 @@ package pl.edu.mimuw.cloudatlas.agent;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
@@ -21,10 +22,9 @@ public interface CloudAtlasInterface extends Remote {
 	public ValueList getZones()throws RemoteException;
 	
 	/**
-	 * Returns list of pairs attribute and value. Pairs are represented as 
-	 * list of two elements. 
+	 * Returns attributes map for given zone.
 	*/
-	public ValueList getValues(ValueString zone) throws RemoteException;
+	public AttributesMap getAttributes(ValueString zone) throws RemoteException; 
 	
 	public void installQuery(ValueString query) throws RemoteException;
 	

@@ -116,6 +116,14 @@ public class PathName implements Serializable {
 		return new PathName(componentsUp);
 	}
 	
+	public PathName consumePrefix() {
+		List<String> newComponents = new ArrayList<>(components);
+		if (!newComponents.isEmpty()) {
+			newComponents.remove(0);
+		}
+		return new PathName(newComponents);
+	}
+	
 	/**
 	 * Gets a name one level down in a hierarchy.
 	 * 

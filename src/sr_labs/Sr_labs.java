@@ -11,14 +11,19 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map.Entry;
+import java.util.Scanner;
+import javafx.util.Pair;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasAgent;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
+import static pl.edu.mimuw.cloudatlas.interpreter.Main.executeQueries;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
@@ -92,11 +97,46 @@ public class Sr_labs {
 		try {
             Registry registry = LocateRegistry.getRegistry("localhost");
             CloudAtlasInterface stub = (CloudAtlasInterface) registry.lookup("CloudAtlas");
-			ValueList result = stub.getZones();
-			System.out.println("Got result");
-			for (Value val : result) {
-				System.out.println(val);
+			Scanner scanner = new Scanner(System.in);
+			scanner.useDelimiter("\\n");
+			System.out.println("Option 0 - install query, 1 - uninstall query, 2 - get zones, 3 - get zone attributes");
+			while(scanner.hasNext()) {
+				int op = scanner.nextInt();
+				String arg;
+				try {
+				switch (op) {
+					case 0: 
+						System.out.println("Enter query:");
+						arg = scanner.next();
+						stub.installQuery(new ValueString(arg));
+						break;
+					case 1:
+						System.out.println("Enter query:");
+						arg = scanner.next();
+						stub.uninstallQuery(new ValueString(arg));
+						break;
+					case 2: 
+						ValueList zones = stub.getZones();
+						for (Value zone : zones) {
+							System.out.println(((ValueString)zone).getValue());
+						}
+						break;
+					case 3: 
+						System.out.println("Enter zone:");
+						arg = scanner.next();
+						AttributesMap map = stub.getAttributes(new ValueString(arg));
+						for (Entry<Attribute, Value> entry : map) {
+							System.out.println(entry.getKey() + ": " + entry.getValue());
+						}
+						break;
+					default:
+						System.out.println("Unknown operation. Clossing.");
+				}
+				} catch(RemoteException e) {
+					System.out.println("CloudAtlas exception: " + e.getMessage());
+				}
 			}
+			scanner.close();
         } catch (Exception e) {
             System.err.println("CloudAtlas exception:");
             e.printStackTrace();

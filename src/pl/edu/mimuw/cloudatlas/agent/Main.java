@@ -61,31 +61,6 @@ public class Main {
 			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
-	
-	private static PathName getPathName(ZMI zmi) {
-		String name = ((ValueString)zmi.getAttributes().get("name")).getValue();
-		return zmi.getFather() == null? PathName.ROOT : getPathName(zmi.getFather()).levelDown(name);
-	}
-	
-	private static void executeQueries(ZMI zmi, String query) throws Exception {
-		if(!zmi.getSons().isEmpty()) {
-			for(ZMI son : zmi.getSons())
-				executeQueries(son, query);
-			Interpreter interpreter = new Interpreter(zmi);
-			Yylex lex = new Yylex(new ByteArrayInputStream(query.getBytes()));
-			try {
-				List<QueryResult> result = interpreter.interpretProgram((new parser(lex)).pProgram());
-				PathName zone = getPathName(zmi);
-				for(QueryResult r : result) {
-					System.out.println(zone + ": " + r);
-					zmi.getAttributes().addOrChange(r.getName(), r.getValue());
-				}
-			} catch(InterpreterException exception) {
-				//System.err.println("Interpreter exception on " + getPathName(zmi) + ": " + exception.getMessage());
-			}
-		}
-	}
-	
 	private static ValueContact createContact(String path, byte ip1, byte ip2, byte ip3, byte ip4)
 			throws UnknownHostException {
 		return new ValueContact(new PathName(path), InetAddress.getByAddress(new byte[] {
@@ -105,34 +80,30 @@ public class Main {
 		
 		root = new ZMI();
 		root.getAttributes().add("level", new ValueInt(0l));
-		root.getAttributes().add("name", new ValueString(null));
 		root.getAttributes().add("owner", new ValueString("/uw/violet07"));
 		root.getAttributes().add("timestamp", new ValueTime("2012/11/09 20:10:17.342"));
 		root.getAttributes().add("contacts", new ValueSet(TypePrimitive.CONTACT));
 		root.getAttributes().add("cardinality", new ValueInt(0l));
 		
-		ZMI uw = new ZMI(root);
+		ZMI uw = new ZMI(root, "uw");
 		root.addSon(uw);
 		uw.getAttributes().add("level", new ValueInt(1l));
-		uw.getAttributes().add("name", new ValueString("uw"));
 		uw.getAttributes().add("owner", new ValueString("/uw/violet07"));
 		uw.getAttributes().add("timestamp", new ValueTime("2012/11/09 20:8:13.123"));
 		uw.getAttributes().add("contacts", new ValueSet(TypePrimitive.CONTACT));
 		uw.getAttributes().add("cardinality", new ValueInt(0l));
 		
-		ZMI pjwstk = new ZMI(root);
+		ZMI pjwstk = new ZMI(root, "pjwstk");
 		root.addSon(pjwstk);
 		pjwstk.getAttributes().add("level", new ValueInt(1l));
-		pjwstk.getAttributes().add("name", new ValueString("pjwstk"));
 		pjwstk.getAttributes().add("owner", new ValueString("/pjwstk/whatever01"));
 		pjwstk.getAttributes().add("timestamp", new ValueTime("2012/11/09 20:8:13.123"));
 		pjwstk.getAttributes().add("contacts", new ValueSet(TypePrimitive.CONTACT));
 		pjwstk.getAttributes().add("cardinality", new ValueInt(0l));
 		
-		ZMI violet07 = new ZMI(uw);
+		ZMI violet07 = new ZMI(uw, "violet07");
 		uw.addSon(violet07);
 		violet07.getAttributes().add("level", new ValueInt(2l));
-		violet07.getAttributes().add("name", new ValueString("violet07"));
 		violet07.getAttributes().add("owner", new ValueString("/uw/violet07"));
 		violet07.getAttributes().add("timestamp", new ValueTime("2012/11/09 18:00:00.000"));
 		list = Arrays.asList(new Value[] {
@@ -154,10 +125,9 @@ public class Main {
 		violet07.getAttributes().add("some_names", new ValueList(list, TypePrimitive.STRING));
 		violet07.getAttributes().add("expiry", new ValueDuration(13l, 12l, 0l, 0l, 0l));
 		
-		ZMI khaki31 = new ZMI(uw);
+		ZMI khaki31 = new ZMI(uw, "khaki31");
 		uw.addSon(khaki31);
 		khaki31.getAttributes().add("level", new ValueInt(2l));
-		khaki31.getAttributes().add("name", new ValueString("khaki31"));
 		khaki31.getAttributes().add("owner", new ValueString("/uw/khaki31"));
 		khaki31.getAttributes().add("timestamp", new ValueTime("2012/11/09 20:03:00.000"));
 		list = Arrays.asList(new Value[] {
@@ -179,10 +149,9 @@ public class Main {
 		khaki31.getAttributes().add("some_names", new ValueList(list, TypePrimitive.STRING));
 		khaki31.getAttributes().add("expiry", new ValueDuration(-13l, -11l, 0l, 0l, 0l));
 		
-		ZMI khaki13 = new ZMI(uw);
+		ZMI khaki13 = new ZMI(uw, "khaki13");
 		uw.addSon(khaki13);
 		khaki13.getAttributes().add("level", new ValueInt(2l));
-		khaki13.getAttributes().add("name", new ValueString("khaki13"));
 		khaki13.getAttributes().add("owner", new ValueString("/uw/khaki13"));
 		khaki13.getAttributes().add("timestamp", new ValueTime("2012/11/09 21:03:00.000"));
 		list = Arrays.asList(new Value[] {});
@@ -200,10 +169,9 @@ public class Main {
 		khaki13.getAttributes().add("some_names", new ValueList(list, TypePrimitive.STRING));
 		khaki13.getAttributes().add("expiry", new ValueDuration((Long)null));
 		
-		ZMI whatever01 = new ZMI(pjwstk);
+		ZMI whatever01 = new ZMI(pjwstk, "whatever01");
 		pjwstk.addSon(whatever01);
 		whatever01.getAttributes().add("level", new ValueInt(2l));
-		whatever01.getAttributes().add("name", new ValueString("whatever01"));
 		whatever01.getAttributes().add("owner", new ValueString("/uw/whatever01"));
 		whatever01.getAttributes().add("timestamp", new ValueTime("2012/11/09 21:12:00.000"));
 		list = Arrays.asList(new Value[] {
@@ -223,10 +191,9 @@ public class Main {
 		});
 		whatever01.getAttributes().add("php_modules", new ValueList(list, TypePrimitive.STRING));
 		
-		ZMI whatever02 = new ZMI(pjwstk);
+		ZMI whatever02 = new ZMI(pjwstk, "whatever02");
 		pjwstk.addSon(whatever02);
 		whatever02.getAttributes().add("level", new ValueInt(2l));
-		whatever02.getAttributes().add("name", new ValueString("whatever02"));
 		whatever02.getAttributes().add("owner", new ValueString("/uw/whatever02"));
 		whatever02.getAttributes().add("timestamp", new ValueTime("2012/11/09 21:13:00.000"));
 		list = Arrays.asList(new Value[] {
