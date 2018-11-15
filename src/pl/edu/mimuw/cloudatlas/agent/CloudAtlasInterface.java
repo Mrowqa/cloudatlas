@@ -38,7 +38,7 @@ public interface CloudAtlasInterface extends Remote {
 	public void installQueries(ValueList queryNames, ValueList queries) throws RemoteException;
 	
 	public void uninstallQueries(ValueList queryNames) throws RemoteException;
-	
+
 	public void setFallbackContacts(ValueSet contacts) throws RemoteException;
 	
 	public ValueSet getFallbackContacts() throws RemoteException;
