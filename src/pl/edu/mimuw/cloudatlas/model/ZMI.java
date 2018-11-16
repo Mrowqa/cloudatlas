@@ -49,6 +49,10 @@ public class ZMI implements Cloneable, Serializable {
 		this(null, null);
 	}
 	
+	public ZMI(ZMI father) {
+		setFather(father);
+		//initRequiredAttributes(null);
+	}
 	/**
 	 * Creates a new ZMI with the specified node as a father and empty sons list. This method does not perform any
 	 * operation on the <code>father</code>. Especially, setting this object as a <code>father</code>'s son must be done
@@ -59,7 +63,7 @@ public class ZMI implements Cloneable, Serializable {
 	 */
 	public ZMI(ZMI father, String name) {
 		setFather(father);
-		initRequiredAttributes(name);
+		//initRequiredAttributes(name);
 	}
 	
 	private void initRequiredAttributes(String name) {
