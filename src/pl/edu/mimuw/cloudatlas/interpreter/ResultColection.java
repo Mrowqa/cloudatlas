@@ -122,7 +122,7 @@ abstract class ResultColection extends Result {
 
 	protected ValueList binaryOperationTypedHelper(BinaryOperation operation, ResultSingle right) {
 		if (right.getValue().isNull()) {
-			throw new UnsupportedOperationException("Binary operation on Resutl{List, Column} and ResultSingle being null not supported.");
+			throw new UnsupportedOperationException("Binary operation on Result{List, Column} and ResultSingle being null not supported.");
 		}
 		if (values.isNull() || values.isEmpty()) {
 			return values;

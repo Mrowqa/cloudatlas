@@ -185,7 +185,7 @@ class Functions {
 				} else
 					throw new IllegalArgumentException("Aggregation doesn't support type: " + v.getType() + ".");
 			}
-			return new ValueBoolean(true);
+			return new ValueBoolean(false);
 		}
 	};
 
