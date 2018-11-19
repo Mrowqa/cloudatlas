@@ -103,29 +103,17 @@ public class Main {
 		ValueContact whatever02Contact = createContact("/uw/whatever02", (byte)82, (byte)111, (byte)52, (byte)57);
 		
 		List<Value> list;
-		
+				
 		root = new ZMI();
 		root.getAttributes().add("level", new ValueInt(0l));
-		root.getAttributes().add("owner", new ValueString("/uw/violet07"));
-		root.getAttributes().add("timestamp", new ValueTime("2012/11/09 20:10:17.342"));
-		root.getAttributes().add("contacts", new ValueSet(TypePrimitive.CONTACT));
-		root.getAttributes().add("cardinality", new ValueInt(0l));
 		
 		ZMI uw = new ZMI(root, "uw");
 		root.addSon(uw);
 		uw.getAttributes().add("level", new ValueInt(1l));
-		uw.getAttributes().add("owner", new ValueString("/uw/violet07"));
-		uw.getAttributes().add("timestamp", new ValueTime("2012/11/09 20:8:13.123"));
-		uw.getAttributes().add("contacts", new ValueSet(TypePrimitive.CONTACT));
-		uw.getAttributes().add("cardinality", new ValueInt(0l));
 		
 		ZMI pjwstk = new ZMI(root, "pjwstk");
 		root.addSon(pjwstk);
 		pjwstk.getAttributes().add("level", new ValueInt(1l));
-		pjwstk.getAttributes().add("owner", new ValueString("/pjwstk/whatever01"));
-		pjwstk.getAttributes().add("timestamp", new ValueTime("2012/11/09 20:8:13.123"));
-		pjwstk.getAttributes().add("contacts", new ValueSet(TypePrimitive.CONTACT));
-		pjwstk.getAttributes().add("cardinality", new ValueInt(0l));
 		
 		ZMI violet07 = new ZMI(uw, "violet07");
 		uw.addSon(violet07);
@@ -144,6 +132,7 @@ public class Main {
 		violet07.getAttributes().add("creation", new ValueTime("2011/11/09 20:8:13.123"));
 		violet07.getAttributes().add("cpu_usage", new ValueDouble(0.9));
 		violet07.getAttributes().add("num_cores", new ValueInt(3l));
+		violet07.getAttributes().add("num_processes", new ValueInt(13l));
 		violet07.getAttributes().add("has_ups", new ValueBoolean(null));
 		list = Arrays.asList(new Value[] {
 			new ValueString("tola"), new ValueString("tosia"),
@@ -168,6 +157,7 @@ public class Main {
 		khaki31.getAttributes().add("creation", new ValueTime("2011/11/09 20:12:13.123"));
 		khaki31.getAttributes().add("cpu_usage", new ValueDouble(null));
 		khaki31.getAttributes().add("num_cores", new ValueInt(3l));
+		khaki31.getAttributes().add("num_processes", new ValueInt(124L));
 		khaki31.getAttributes().add("has_ups", new ValueBoolean(false));
 		list = Arrays.asList(new Value[] {
 			new ValueString("agatka"), new ValueString("beatka"), new ValueString("celina"),
@@ -190,15 +180,16 @@ public class Main {
 		khaki13.getAttributes().add("creation", new ValueTime((Long)null));
 		khaki13.getAttributes().add("cpu_usage", new ValueDouble(0.1));
 		khaki13.getAttributes().add("num_cores", new ValueInt(null));
+		khaki13.getAttributes().add("num_processes", new ValueInt(107L));
 		khaki13.getAttributes().add("has_ups", new ValueBoolean(true));
 		list = Arrays.asList(new Value[] {});
 		khaki13.getAttributes().add("some_names", new ValueList(list, TypePrimitive.STRING));
 		khaki13.getAttributes().add("expiry", new ValueDuration((Long)null));
-		
+				
 		ZMI whatever01 = new ZMI(pjwstk, "whatever01");
 		pjwstk.addSon(whatever01);
 		whatever01.getAttributes().add("level", new ValueInt(2l));
-		whatever01.getAttributes().add("owner", new ValueString("/uw/whatever01"));
+		whatever01.getAttributes().add("owner", new ValueString("/pjwstk/whatever01"));
 		whatever01.getAttributes().add("timestamp", new ValueTime("2012/11/09 21:12:00.000"));
 		list = Arrays.asList(new Value[] {
 			violet07Contact, whatever02Contact,
@@ -212,11 +203,12 @@ public class Main {
 		whatever01.getAttributes().add("creation", new ValueTime("2012/10/18 07:03:00.000"));
 		whatever01.getAttributes().add("cpu_usage", new ValueDouble(0.1));
 		whatever01.getAttributes().add("num_cores", new ValueInt(7l));
+		whatever01.getAttributes().add("num_processes", new ValueInt(215L));
 		list = Arrays.asList(new Value[] {
 			new ValueString("rewrite")
 		});
 		whatever01.getAttributes().add("php_modules", new ValueList(list, TypePrimitive.STRING));
-		
+				
 		ZMI whatever02 = new ZMI(pjwstk, "whatever02");
 		pjwstk.addSon(whatever02);
 		whatever02.getAttributes().add("level", new ValueInt(2l));
@@ -234,6 +226,7 @@ public class Main {
 		whatever02.getAttributes().add("creation", new ValueTime("2012/10/18 07:04:00.000"));
 		whatever02.getAttributes().add("cpu_usage", new ValueDouble(0.4));
 		whatever02.getAttributes().add("num_cores", new ValueInt(13l));
+		whatever02.getAttributes().add("num_processes", new ValueInt(222L));
 		list = Arrays.asList(new Value[] {
 			new ValueString("odbc")
 		});
