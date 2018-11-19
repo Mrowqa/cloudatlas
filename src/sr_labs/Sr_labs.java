@@ -17,14 +17,13 @@ import java.rmi.registry.Registry;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Scanner;
 import javafx.util.Pair;
-import pl.edu.mimuw.cloudatlas.agent.CloudAtlasAgent;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
-import static pl.edu.mimuw.cloudatlas.interpreter.Main.executeQueries;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
@@ -36,6 +35,7 @@ import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueBoolean;
 import pl.edu.mimuw.cloudatlas.model.ValueContact;
 import pl.edu.mimuw.cloudatlas.model.ValueDouble;
+import pl.edu.mimuw.cloudatlas.model.ValueInt;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
@@ -103,7 +103,7 @@ public class Sr_labs {
 			printTestCloudAtlasMenu();
 			while(scanner.hasNext()) {
 				int op = scanner.nextInt();
-				String arg;
+				String arg, query;
 				try {
 				switch (op) {
 					case 1: 
@@ -123,23 +123,36 @@ public class Sr_labs {
 					case 3:
 						System.out.println("Enter zone:");
 						arg = scanner.next();
+						
 						System.out.println("Enter attribute:");
 						ValueString attribute = new ValueString(scanner.next());
-						System.out.println("Enter value (only ValueString)");
-						ValueString value = new ValueString(scanner.next());
+						
+						System.out.println("Enter value (only ValueInt)");
+						ValueInt value = new ValueInt(scanner.nextLong());
 						stub.setValue(new ValueString(arg), attribute, value);
 						System.out.println("Value set.");
 						break;
 					case 4: 
-						System.out.println("Enter query:");
+						System.out.println("Enter query name (preceded with &):");
 						arg = scanner.next();
-						stub.installQuery(new ValueString(arg));
+						ValueList queryNames = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
+						queryNames.add(new ValueString(arg));
+						
+						System.out.println("Enter query:");
+						query = scanner.next();
+						ValueList queries = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
+						queries.add(new ValueString(query));
+						
+						stub.installQueries(queryNames, queries);
 						System.out.println("Query installed.");
 						break;
 					case 5:
-						System.out.println("Enter query:");
+						System.out.println("Enter query name (preceded with &):");
 						arg = scanner.next();
-						stub.uninstallQuery(new ValueString(arg));
+						ValueList queryNames2 = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
+						queryNames2.add(new ValueString(arg));
+						
+						stub.uninstallQueries(queryNames2);
 						System.out.println("Query uninstalled.");
 						break;
 					case 6:

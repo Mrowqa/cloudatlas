@@ -26,9 +26,9 @@ public interface CloudAtlasInterface extends Remote {
 	*/
 	public AttributesMap getAttributes(ValueString zone) throws RemoteException; 
 	
-	public void installQuery(ValueString query) throws RemoteException;
+	public void installQueries(ValueList queryNames, ValueList queries) throws RemoteException;
 	
-	public void uninstallQuery(ValueString query) throws RemoteException;
+	public void uninstallQueries(ValueList queryNames) throws RemoteException;
 	
 	public void setValue(ValueString zone, ValueString attribute, Value value) throws RemoteException;
 	

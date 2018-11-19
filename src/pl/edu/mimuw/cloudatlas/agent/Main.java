@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.util.Duration;
 import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
 import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
 import pl.edu.mimuw.cloudatlas.interpreter.QueryResult;
@@ -43,16 +44,17 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  * @author pawel
  */
 public class Main {
-
+	private static Duration queryDuration = Duration.seconds(5);
 	/**
 	 * @param args the command line arguments
 	 */
 	public static void main(String[] args) {
+		parseDuration(args);
 		if (System.getSecurityManager() == null) {
             System.setSecurityManager(new SecurityManager());
         }
 		try {
-			CloudAtlasAgent agent = new CloudAtlasAgent(createTestHierarchy());
+			CloudAtlasAgent agent = new CloudAtlasAgent(createTestHierarchy(), queryDuration);
 			CloudAtlasInterface stub = (CloudAtlasInterface) UnicastRemoteObject.exportObject(agent, 0);
 			Registry registry = LocateRegistry.getRegistry();
             registry.rebind("CloudAtlas", stub);
@@ -61,6 +63,31 @@ public class Main {
 			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
+	
+	private static void parseDuration(String[] args) {
+		System.out.println("Args lenght " + args.length);
+		if (args.length < 1) {
+			return;
+		}
+		char durationUnit = args[0].charAt(args[0].length() - 1);
+		int durationValue = Integer.parseInt(args[0].substring(0, args[0].length() - 1));
+		switch(durationUnit) {
+			case 'h': 
+				queryDuration = Duration.hours(durationValue); 
+				break;
+			case 'm':
+				queryDuration = Duration.minutes(durationValue); 
+				break;
+			case 's':
+				System.out.println("Seconds parsed");
+				queryDuration = Duration.seconds(durationValue); 
+				break;
+			default:
+				System.err.println("Invalid duration unit, got " + durationUnit + " allowed h|m|s.");
+				System.exit(1);
+		}
+	}
+	
 	private static ValueContact createContact(String path, byte ip1, byte ip2, byte ip3, byte ip4)
 			throws UnknownHostException {
 		return new ValueContact(new PathName(path), InetAddress.getByAddress(new byte[] {
