@@ -14,6 +14,8 @@ import java.time.Duration;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jdk.nashorn.internal.codegen.types.Type;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
@@ -43,10 +45,12 @@ public class Fetcher extends Thread {
 		while (true) {
 			AttributesMap data = collectData();
 			try {
-			rmi.setZoneAttributes(zone, data);
+				rmi.setZoneAttributes(zone, data);
+				Logger.getLogger(Fetcher.class.getName()).log(Level.FINEST, "Data collected & set.");
 			}
 			catch (RemoteException ex) {
-				System.err.println("Call to rmi.setZoneAttributes() failed.");
+				System.err.println();
+				Logger.getLogger(Fetcher.class.getName()).log(Level.SEVERE, "Call to rmi.setZoneAttributes() failed.", ex);
 			}
 
 			try {

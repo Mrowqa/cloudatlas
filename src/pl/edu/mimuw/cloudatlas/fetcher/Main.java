@@ -16,12 +16,12 @@ import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 
 /**
  *
- * @author pawel
+ * @author mrowqa
  */
 public class Main {
 
-	private static Duration sleepDuration;
-	private static String targetZone;
+	private static Duration sleepDuration = Duration.ofMinutes(5);
+	private static String targetZone = "/uw/violet07";
 
 	/**
 	 * @param args the command line arguments
@@ -35,13 +35,16 @@ public class Main {
 
 		parseCmdArgs(args);
 		Fetcher f = new Fetcher(sleepDuration, stub, targetZone);
-		f.run(); // it is just fine
-		//f.start();
-		//f.join();
+		f.run(); // it is just fine, no need for f.start()
 	}
 
 	private static void parseCmdArgs(String[] args) {
-		if (args.length != 4 || args[0].equals("--sleep") || args[2].equals("--zone")) {
+		if (args.length == 0) {
+			System.out.println("Warning: using fetcher with default zone: " + targetZone);
+			return;
+		}
+
+		if (args.length != 4 || !args[0].equals("--sleep") || !args[2].equals("--zone")) {
 			System.err.println("Usage: <me> --sleep <num>(h|m|s) --zone /my/leaf/node");
 			System.exit(1);
 		}
