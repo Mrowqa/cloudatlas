@@ -54,7 +54,8 @@ public class Main {
             System.setSecurityManager(new SecurityManager());
         }
 		try {
-			CloudAtlasAgent agent = new CloudAtlasAgent(createTestHierarchy(), queryDuration);
+			CloudAtlasAgent agent = new CloudAtlasAgent(createTestHierarchy());
+			agent.startQueryExecutor(queryDuration);
 			CloudAtlasInterface stub = (CloudAtlasInterface) UnicastRemoteObject.exportObject(agent, 0);
 			Registry registry = LocateRegistry.getRegistry();
             registry.rebind("CloudAtlas", stub);
@@ -65,7 +66,6 @@ public class Main {
 	}
 	
 	private static void parseDuration(String[] args) {
-		System.out.println("Args lenght " + args.length);
 		if (args.length < 1) {
 			return;
 		}
@@ -79,7 +79,6 @@ public class Main {
 				queryDuration = Duration.minutes(durationValue); 
 				break;
 			case 's':
-				System.out.println("Seconds parsed");
 				queryDuration = Duration.seconds(durationValue); 
 				break;
 			default:

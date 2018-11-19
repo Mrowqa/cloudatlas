@@ -39,22 +39,23 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
 // TODO consider synchronisation - implement reader/writers monitor
 public class CloudAtlasAgent implements CloudAtlasInterface {
 	private final ZMI zmi;
+	private QueryExecutor executor = null;
 	private ValueSet fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.STRING);
 
-	private static class QueryExecuter extends Thread {
+	private static class QueryExecutor extends Thread {
+		private final CloudAtlasAgent agent;
 		private final Duration duration;
-		private final ZMI zmi1;
 		
-		public QueryExecuter(ZMI _zmi, Duration _duration) {
-			zmi1 = _zmi;
-			duration = _duration;
+		public QueryExecutor(CloudAtlasAgent agent, Duration duration) {
+			this.agent = agent;
+			this.duration = duration;
 		}
 		
 		@Override
 		public void run() {
 			while(true) {
 				try {
-					executeQueries(zmi1);
+					agent.executeQueries();
 					System.out.println("Queries executed.");
 					Thread.sleep((long) duration.toMillis());
 				} catch (Exception ex) {
@@ -64,26 +65,33 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		}
 	}
 	
-	public CloudAtlasAgent(ZMI _zmi, Duration duration) {
-		zmi = _zmi;
-		Thread executer = new QueryExecuter(zmi, duration);
-		executer.start();
-		System.out.println("QueryExecuter started");
+	public CloudAtlasAgent(ZMI zmi) {
+		this.zmi = zmi;
+	}
+	
+	public void startQueryExecutor(Duration duration) {
+		if (executor != null) {
+			System.err.println("Query executor already started.");
+			return;
+		}
+		executor = new QueryExecutor(this, duration);
+		executor.start();
+		System.out.println("Query executor started");
 	}
 	
 	@Override
-	public ValueList getZones() throws RemoteException {
+	public synchronized ValueList getZones() throws RemoteException {
 		return zmi.getZones();
 	}
 
 	@Override
-	public AttributesMap getAttributes(ValueString zone) throws RemoteException {
+	public synchronized AttributesMap getAttributes(ValueString zone) throws RemoteException {
 		return findZone(zmi, zone.getValue()).getAttributes();
 	}
 	
 	// TODO refactor {install, uninstall, exectue}Queries to have generic code for ZMI traversing.
 	@Override
-	public void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
+	public synchronized void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
 		checkElementType((TypeCollection)queryNames.getType(), PrimaryType.STRING);
 		checkElementType((TypeCollection)queryNames.getType(), PrimaryType.STRING);
 		if (queryNames.size() != queries.size()) {
@@ -100,7 +108,7 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 	}
 
 	@Override
-	public void uninstallQueries(ValueList queryNames) throws RemoteException {
+	public synchronized void uninstallQueries(ValueList queryNames) throws RemoteException {
 		checkElementType((TypeCollection)queryNames.getType(), PrimaryType.STRING);
 		for (Value queryName : queryNames) {
 			Attribute attribute = new Attribute(((ValueString)queryName).getValue());
@@ -112,7 +120,7 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 	}
 
 	@Override
-	public void setValue(ValueString zone, ValueString attribute, Value value) throws RemoteException {
+	public synchronized void setValue(ValueString zone, ValueString attribute, Value value) throws RemoteException {
 		ZMI zoneZmi = findZone(zmi, new PathName(zone.getValue()));
 		if (!zoneZmi.getSons().isEmpty()) {
 			throw new IllegalArgumentException("setValue attribute is only allowed for singleton zone.");
@@ -121,7 +129,7 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 	}
 
 	@Override
-	public void setFallbackContacts(ValueSet contacts) throws RemoteException {
+	public synchronized void setFallbackContacts(ValueSet contacts) throws RemoteException {
 		if (contacts.isNull()) {
 			throw new IllegalArgumentException("Fallback contacts set can't be null");
 		}
@@ -130,10 +138,13 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 	}
 	
 	@Override
-	public ValueSet getFallbackContacts() throws RemoteException {
+	public synchronized ValueSet getFallbackContacts() throws RemoteException {
 		return fallbackContacts;
 	}
 
+	private synchronized void executeQueries() throws Exception {
+		executeQueries(zmi);
+	}
 	
 	private void checkElementType(TypeCollection collectionType, PrimaryType expectedType) {
 		PrimaryType actualType = collectionType.getElementType().getPrimaryType();
