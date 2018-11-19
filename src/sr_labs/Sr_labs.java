@@ -160,10 +160,13 @@ public class Sr_labs {
 					case 6:
 						System.out.println("Enter number of contacts:");
 						int n = scanner.nextInt();
-						ValueSet contacts = new ValueSet(new HashSet<>(), TypePrimitive.STRING);
-						System.out.println("Enter all contacts each in a new line.");
+						ValueSet contacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
 						for (int i = 0; i < n; i++) {
-							contacts.add(new ValueString(scanner.next()));
+							System.out.println("Enter path name of the contact:");
+							arg = scanner.next();
+							System.out.println("Enter address of the contact:");
+							InetAddress address = InetAddress.getByName(scanner.next());
+							contacts.add(new ValueContact(new PathName(arg), address));
 						}
 						stub.setFallbackContacts(contacts);
 						System.out.println("Fallback contacts set.");

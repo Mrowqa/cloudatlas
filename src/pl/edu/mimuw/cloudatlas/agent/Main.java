@@ -8,7 +8,6 @@ package pl.edu.mimuw.cloudatlas.agent;
 
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.io.ByteArrayInputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.rmi.server.UnicastRemoteObject;
@@ -19,11 +18,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.util.Duration;
-import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
-import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
-import pl.edu.mimuw.cloudatlas.interpreter.QueryResult;
-import pl.edu.mimuw.cloudatlas.interpreter.query.Yylex;
-import pl.edu.mimuw.cloudatlas.interpreter.query.parser;
 import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
@@ -44,7 +38,7 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  * @author pawel
  */
 public class Main {
-	private static Duration queryDuration = Duration.seconds(5);
+	private static Duration queryDuration = Duration.minutes(5);
 	/**
 	 * @param args the command line arguments
 	 */

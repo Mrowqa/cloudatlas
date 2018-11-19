@@ -177,8 +177,6 @@ public class ZMI implements Cloneable, Serializable {
 		return result;
 	}
 	
-	// TODO use class Path to simplify the code.
-	// TODO does addValue make copy
 	public ValueList getZones() {
 		ValueList result = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
 		result.add(new ValueString(pathName.toString()));

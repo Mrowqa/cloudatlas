@@ -27,8 +27,6 @@ package pl.edu.mimuw.cloudatlas.model;
 import java.io.Serializable;
 import java.net.InetAddress;
 
-import pl.edu.mimuw.cloudatlas.model.Value;
-import pl.edu.mimuw.cloudatlas.model.ValueContact;
 
 /**
  * A class that represents a contact to a node. The contact consists of a full path name of this node and its IP

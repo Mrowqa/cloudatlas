@@ -11,7 +11,6 @@ import java.rmi.RemoteException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.util.Duration;
@@ -36,11 +35,10 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  *
  * @author pawel
  */
-// TODO consider synchronisation - implement reader/writers monitor
 public class CloudAtlasAgent implements CloudAtlasInterface {
 	private final ZMI zmi;
 	private QueryExecutor executor = null;
-	private ValueSet fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.STRING);
+	private ValueSet fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
 
 	private static class QueryExecutor extends Thread {
 		private final CloudAtlasAgent agent;
@@ -56,7 +54,7 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 			while(true) {
 				try {
 					agent.executeQueries();
-					System.out.println("Queries executed.");
+					Logger.getLogger(CloudAtlasAgent.class.getName()).log(Level.FINEST, "Queries exectued.");
 					Thread.sleep((long) duration.toMillis());
 				} catch (Exception ex) {
 					Logger.getLogger(CloudAtlasAgent.class.getName()).log(Level.SEVERE, null, ex);
@@ -89,11 +87,10 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		return findZone(zmi, zone.getValue()).getAttributes();
 	}
 	
-	// TODO refactor {install, uninstall, exectue}Queries to have generic code for ZMI traversing.
 	@Override
 	public synchronized void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
 		checkElementType((TypeCollection)queryNames.getType(), PrimaryType.STRING);
-		checkElementType((TypeCollection)queryNames.getType(), PrimaryType.STRING);
+		checkElementType((TypeCollection)queries.getType(), PrimaryType.STRING);
 		if (queryNames.size() != queries.size()) {
 			throw new RemoteException("QueriesNames and queries should have equal size " + queryNames.size() + " vs " + queries.size());
 		}
@@ -133,7 +130,7 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		if (contacts.isNull()) {
 			throw new IllegalArgumentException("Fallback contacts set can't be null");
 		}
-		checkElementType((TypeCollection)contacts.getType(), PrimaryType.STRING);
+		checkElementType((TypeCollection)contacts.getType(), PrimaryType.CONTACT);
 		fallbackContacts = contacts;
 	}
 	
