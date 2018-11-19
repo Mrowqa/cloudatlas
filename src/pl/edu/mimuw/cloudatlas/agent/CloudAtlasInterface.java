@@ -24,13 +24,20 @@ public interface CloudAtlasInterface extends Remote {
 	/**
 	 * Returns attributes map for given zone.
 	*/
-	public AttributesMap getAttributes(ValueString zone) throws RemoteException; 
+	public AttributesMap getZoneAttributes(ValueString zone) throws RemoteException;
+
+	/**
+	 * Sets or updates multiple attributes at once. Please note it doesn't
+	 * remove existing attributes, even if they are not updated with new value.
+	 * @param zone
+	 * @param attributes
+	 * @throws RemoteException
+	 */
+	public void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException;
 	
 	public void installQueries(ValueList queryNames, ValueList queries) throws RemoteException;
 	
 	public void uninstallQueries(ValueList queryNames) throws RemoteException;
-	
-	public void setValue(ValueString zone, ValueString attribute, Value value) throws RemoteException;
 	
 	public void setFallbackContacts(ValueSet contacts) throws RemoteException;
 	

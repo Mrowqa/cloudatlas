@@ -115,7 +115,7 @@ public class Sr_labs {
 					case 2: 
 						System.out.println("Enter zone:");
 						arg = scanner.next();
-						AttributesMap map = stub.getAttributes(new ValueString(arg));
+						AttributesMap map = stub.getZoneAttributes(new ValueString(arg));
 						for (Entry<Attribute, Value> entry : map) {
 							System.out.println(entry.getKey() + ": " + entry.getValue());
 						}
@@ -129,7 +129,9 @@ public class Sr_labs {
 						
 						System.out.println("Enter value (only ValueInt)");
 						ValueInt value = new ValueInt(scanner.nextLong());
-						stub.setValue(new ValueString(arg), attribute, value);
+						AttributesMap attrs = new AttributesMap();
+						attrs.add(attribute.getValue(), value);
+						stub.setZoneAttributes(new ValueString(arg), attrs);
 						System.out.println("Value set.");
 						break;
 					case 4: 

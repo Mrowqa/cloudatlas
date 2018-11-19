@@ -85,7 +85,7 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 	}
 
 	@Override
-	public synchronized AttributesMap getAttributes(ValueString zone) throws RemoteException {
+	public synchronized AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
 		return findZone(zmi, zone.getValue()).getAttributes();
 	}
 	
@@ -120,12 +120,12 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 	}
 
 	@Override
-	public synchronized void setValue(ValueString zone, ValueString attribute, Value value) throws RemoteException {
+	public synchronized void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException {
 		ZMI zoneZmi = findZone(zmi, new PathName(zone.getValue()));
 		if (!zoneZmi.getSons().isEmpty()) {
-			throw new IllegalArgumentException("setValue attribute is only allowed for singleton zone.");
+			throw new IllegalArgumentException("setZoneAttributes is only allowed for singleton zone.");
 		}
-		zoneZmi.getAttributes().addOrChange(attribute.getValue(), value);
+		zoneZmi.getAttributes().addOrChange(attributes);
 	}
 
 	@Override
