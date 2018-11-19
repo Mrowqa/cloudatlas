@@ -152,14 +152,6 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 			throw new IllegalArgumentException("Illegal type, got: " + actualType + " expected " + expectedType);
 	}
 	
-	private static void removeAttributes(ZMI zmi, Set<String> attributes) {
-		if (!zmi.getSons().isEmpty()) {
-			for (String attribute : attributes)
-				zmi.getAttributes().remove(attribute);
-			for (ZMI son : zmi.getSons())
-				removeAttributes(son, attributes);
-		}
-	}
 	
 	private static void executeQueries(ZMI zmi) throws Exception {
 		if(!zmi.getSons().isEmpty()) {
