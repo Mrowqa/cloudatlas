@@ -1,16 +1,14 @@
 #!/bin/sh
-#
-# Distributed Systems Lab
-# Copyright (C) Konrad Iwanicki, 2012-2014
-#
-# This file contains code samples for the distributed systems
-# course. It is intended for internal use only.
-#
 
-#if [ $# -ne 1 ]; then
-#  echo "Usage: client.sh <N>" >&2
-#  exit 1
-#fi
+dir=${PWD}
+rundir=${dir}/build/classes
+path=${rundir}:${dir}/lib/cup.jar:${dir}/lib/JLex.jar
 
-java -cp $PWD:../../lib/cup.jar:../../lib/JLex.jar -Djava.rmi.server.codebase=file:$PWD -Djava.security.policy=client.policy sr_labs.Sr_labs
+policy='grant codeBase "file:'
+policy=$policy$rundir
+suffix='" {\n permission java.security.AllPermission;\n};'
+policy=$policy$suffix
+echo $policy > ${rundir}/all.policy
 
+java -cp ${path} -Djava.rmi.server.codebase=file:${rundir} \
+  -Djava.security.policy=all.policy sr_labs.Sr_labs
