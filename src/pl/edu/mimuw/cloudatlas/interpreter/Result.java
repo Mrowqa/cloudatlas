@@ -30,6 +30,7 @@ import pl.edu.mimuw.cloudatlas.model.Type;
 import pl.edu.mimuw.cloudatlas.model.TypeCollection;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
+import pl.edu.mimuw.cloudatlas.model.ValueString;
 
 abstract class Result {
 	public interface BinaryOperation {
@@ -193,6 +194,9 @@ abstract class Result {
 	}
 
 	public Result regExpr(Result right) {
+		try {
+			System.out.println("Regexp " + getValue() + " " + ((ValueString)right.getValue()).getValue());
+		} catch(Exception ex) {}
 		return right.callMe(REG_EXPR, this);
 	}
 
