@@ -9,7 +9,6 @@ package pl.edu.mimuw.cloudatlas.agent;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
-import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
@@ -35,7 +34,13 @@ public interface CloudAtlasInterface extends Remote {
 	 */
 	public void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException;
 	
-	public void installQueries(ValueList queryNames, ValueList queries) throws RemoteException;
+	/**
+	 * Install queries. All entries that maps valid query name to query or list 
+	 * of queries will be installed.
+	 * @param queries
+	 * @throws RemoteException
+	 */
+	public void installQueries(AttributesMap queries) throws RemoteException;
 	
 	public void uninstallQueries(ValueList queryNames) throws RemoteException;
 	

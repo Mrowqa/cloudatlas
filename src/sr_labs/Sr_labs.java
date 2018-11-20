@@ -5,24 +5,17 @@
  */
 package sr_labs;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Scanner;
-import javafx.util.Pair;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
@@ -102,7 +95,7 @@ public class Sr_labs {
 			scanner.useDelimiter("\\n");
 			printTestCloudAtlasMenu();
 			while(scanner.hasNext()) {
-				int op = scanner.nextInt();
+				int op = scanner.nextInt(), n;
 				String arg, query;
 				try {
 				switch (op) {
@@ -135,18 +128,21 @@ public class Sr_labs {
 						System.out.println("Value set.");
 						break;
 					case 4: 
-						System.out.println("Enter query name (preceded with &):");
+						System.out.println("Enter attribute name (preceded with &):");
 						arg = scanner.next();
-						ValueList queryNames = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
-						queryNames.add(new ValueString(arg));
 						
-						System.out.println("Enter query:");
-						query = scanner.next();
+						System.out.println("Enter number of queries for attribute");
+						n = scanner.nextInt();
+						AttributesMap attrs2 = new AttributesMap();
 						ValueList queries = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
-						queries.add(new ValueString(query));
-						
-						stub.installQueries(queryNames, queries);
-						System.out.println("Query installed.");
+						for (int i = 0; i < n; i++) {
+							System.out.println("Enter query:");
+							query = scanner.next();
+							queries.add(new ValueString(query));
+						}
+						attrs2.add(arg, queries);
+						stub.installQueries(attrs2);
+						System.out.println("Queries installed.");
 						break;
 					case 5:
 						System.out.println("Enter query name (preceded with &):");
@@ -159,7 +155,7 @@ public class Sr_labs {
 						break;
 					case 6:
 						System.out.println("Enter number of contacts:");
-						int n = scanner.nextInt();
+						n = scanner.nextInt();
 						ValueSet contacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
 						for (int i = 0; i < n; i++) {
 							System.out.println("Enter path name of the contact:");

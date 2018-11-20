@@ -55,6 +55,7 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 				try {
 					agent.executeQueries();
 					Logger.getLogger(CloudAtlasAgent.class.getName()).log(Level.FINEST, "Queries exectued.");
+					System.out.println("Queries executed");
 					Thread.sleep((long) duration.toMillis());
 				} catch (Exception ex) {
 					Logger.getLogger(CloudAtlasAgent.class.getName()).log(Level.SEVERE, null, ex);
@@ -88,19 +89,13 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 	}
 	
 	@Override
-	public synchronized void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
-		checkElementType((TypeCollection)queryNames.getType(), PrimaryType.STRING);
-		checkElementType((TypeCollection)queries.getType(), PrimaryType.STRING);
-		if (queryNames.size() != queries.size()) {
-			throw new RemoteException("QueriesNames and queries should have equal size " + queryNames.size() + " vs " + queries.size());
-		}
-		for (int i = 0; i < queryNames.size(); i++) {
-			Attribute attribute = new Attribute(((ValueString)queryNames.get(i)).getValue());
-			ValueString query = (ValueString)queries.get(i);
-			if (!Attribute.isQuery(attribute)) {
-				throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
+	public synchronized void installQueries(AttributesMap queries) throws RemoteException {
+		for (Entry<Attribute, Value> queryEntry : queries) {
+			Attribute attribute = queryEntry.getKey();
+			Value query = queryEntry.getValue();
+			if (Attribute.isQuery(attribute) && hasQueryType(query)) {
+				installQuery(zmi, attribute, query);
 			}
-			installQuery(zmi, attribute, query);
 		}
 	}
 
@@ -143,6 +138,18 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		executeQueries(zmi);
 	}
 	
+	private boolean hasQueryType(Value query) {
+		PrimaryType primaryType = query.getType().getPrimaryType();
+		if (primaryType == PrimaryType.STRING) {
+			return true;
+		}
+		if (primaryType != PrimaryType.LIST) {
+			return false;
+		}
+		PrimaryType elementType = ((TypeCollection)query.getType()).getElementType().getPrimaryType();
+		return elementType == PrimaryType.STRING;
+	}
+	
 	private void checkElementType(TypeCollection collectionType, PrimaryType expectedType) {
 		PrimaryType actualType = collectionType.getElementType().getPrimaryType();
 		if (actualType != expectedType) 
@@ -154,26 +161,34 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		if(!zmi.getSons().isEmpty()) {
 			for(ZMI son : zmi.getSons())
 				executeQueries(son);
-			Interpreter interpreter = new Interpreter(zmi);
 			for (Entry<Attribute, Value> entry : zmi.getAttributes()) {
 				if (!Attribute.isQuery(entry.getKey())) {
 					continue;
 				}
-				String query = ((ValueString)entry.getValue()).getValue();
-				Yylex lex = new Yylex(new ByteArrayInputStream(query.getBytes()));
-				try {
-					List<QueryResult> result = interpreter.interpretProgram((new parser(lex)).pProgram());
-					for (QueryResult r : result) {
-						zmi.getAttributes().addOrChange(r.getName(), r.getValue());
+				Value queryValue = entry.getValue();
+				if (queryValue.getType().getPrimaryType() == PrimaryType.STRING) {
+					executeQuery(zmi, (ValueString)queryValue);
+				} else {
+					for (Value query : ((ValueList)queryValue)) {
+						executeQuery(zmi, (ValueString)query);
 					}
-				} catch(InterpreterException exception) {
-					//System.err.println("Interpreter exception on " + getPathName(zmi) + ": " + exception.getMessage());
 				}
 			}
 		}
 	}
 	
-	private static void installQuery(ZMI zmi, Attribute attribute, ValueString query) {
+	private static void executeQuery(ZMI zmi, ValueString query) throws Exception {
+		Interpreter interpreter = new Interpreter(zmi);
+		Yylex lex = new Yylex(new ByteArrayInputStream(query.getValue().getBytes()));
+		try {
+			List<QueryResult> result = interpreter.interpretProgram((new parser(lex)).pProgram());
+			for (QueryResult r : result) {
+				zmi.getAttributes().addOrChange(r.getName(), r.getValue());
+			}
+		} catch(InterpreterException exception) {}
+	}
+	
+	private static void installQuery(ZMI zmi, Attribute attribute, Value query) {
 		if(!zmi.getSons().isEmpty()) {
 			for(ZMI son : zmi.getSons())
 				installQuery(son, attribute, query);
