@@ -90,11 +90,17 @@ public class Main {
 	
 	private static ZMI createTestHierarchy() throws ParseException, UnknownHostException {
 		ZMI root;
-		ValueContact violet07Contact = createContact("/uw/violet07", (byte)10, (byte)1, (byte)1, (byte)10);
-		ValueContact khaki13Contact = createContact("/uw/khaki13", (byte)10, (byte)1, (byte)1, (byte)38);
-		ValueContact khaki31Contact = createContact("/uw/khaki31", (byte)10, (byte)1, (byte)1, (byte)39);
-		ValueContact whatever01Contact = createContact("/uw/whatever01", (byte)82, (byte)111, (byte)52, (byte)56);
-		ValueContact whatever02Contact = createContact("/uw/whatever02", (byte)82, (byte)111, (byte)52, (byte)57);
+		ValueContact uw1 = createContact("/uw1", (byte)10, (byte)1, (byte)1, (byte)10);
+		ValueContact uw1a = createContact("/uw1a", (byte)10, (byte)1, (byte)1, (byte)10);
+		ValueContact uw1b = createContact("/uw1b", (byte)10, (byte)1, (byte)1, (byte)10);
+		ValueContact uw1c = createContact("/uw1c", (byte)10, (byte)1, (byte)1, (byte)10);
+				
+		ValueContact uw2a = createContact("/uw2a", (byte)10, (byte)1, (byte)1, (byte)10);
+		ValueContact uw3a = createContact("/uw3a", (byte)10, (byte)1, (byte)1, (byte)10);
+		ValueContact uw3b = createContact("/uw3b", (byte)10, (byte)1, (byte)1, (byte)10);
+		
+		ValueContact pj1 = createContact("/pj1", (byte)10, (byte)1, (byte)1, (byte)10);
+		ValueContact pj2 = createContact("/pj2", (byte)10, (byte)1, (byte)1, (byte)10);
 		
 		List<Value> list;
 				
@@ -115,12 +121,12 @@ public class Main {
 		violet07.getAttributes().add("owner", new ValueString("/uw/violet07"));
 		violet07.getAttributes().add("timestamp", new ValueTime("2012/11/09 18:00:00.000"));
 		list = Arrays.asList(new Value[] {
-			khaki31Contact, whatever01Contact
+			uw1a, uw1b, uw1c
 		});
 		violet07.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
 		violet07.getAttributes().add("cardinality", new ValueInt(1l));
 		list = Arrays.asList(new Value[] {
-			violet07Contact,
+			uw1,
 		});
 		violet07.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
 		violet07.getAttributes().add("creation", new ValueTime("2011/11/09 20:8:13.123"));
@@ -140,12 +146,12 @@ public class Main {
 		khaki31.getAttributes().add("owner", new ValueString("/uw/khaki31"));
 		khaki31.getAttributes().add("timestamp", new ValueTime("2012/11/09 20:03:00.000"));
 		list = Arrays.asList(new Value[] {
-			violet07Contact, whatever02Contact,
+			uw2a
 		});
 		khaki31.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
 		khaki31.getAttributes().add("cardinality", new ValueInt(1l));
 		list = Arrays.asList(new Value[] {
-			khaki31Contact
+			uw2a
 		});
 		khaki31.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
 		khaki31.getAttributes().add("creation", new ValueTime("2011/11/09 20:12:13.123"));
@@ -164,11 +170,13 @@ public class Main {
 		khaki13.getAttributes().add("level", new ValueInt(2l));
 		khaki13.getAttributes().add("owner", new ValueString("/uw/khaki13"));
 		khaki13.getAttributes().add("timestamp", new ValueTime("2012/11/09 21:03:00.000"));
-		list = Arrays.asList(new Value[] {});
+		list = Arrays.asList(new Value[] {
+			uw3a, uw3b
+		});
 		khaki13.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
 		khaki13.getAttributes().add("cardinality", new ValueInt(1l));
 		list = Arrays.asList(new Value[] {
-			khaki13Contact,
+			uw3b
 		});
 		khaki13.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
 		khaki13.getAttributes().add("creation", new ValueTime((Long)null));
@@ -186,12 +194,12 @@ public class Main {
 		whatever01.getAttributes().add("owner", new ValueString("/pjwstk/whatever01"));
 		whatever01.getAttributes().add("timestamp", new ValueTime("2012/11/09 21:12:00.000"));
 		list = Arrays.asList(new Value[] {
-			violet07Contact, whatever02Contact,
+			pj1
 		});
 		whatever01.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
 		whatever01.getAttributes().add("cardinality", new ValueInt(1l));
 		list = Arrays.asList(new Value[] {
-			whatever01Contact,
+			pj1
 		});
 		whatever01.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
 		whatever01.getAttributes().add("creation", new ValueTime("2012/10/18 07:03:00.000"));
@@ -209,12 +217,12 @@ public class Main {
 		whatever02.getAttributes().add("owner", new ValueString("/uw/whatever02"));
 		whatever02.getAttributes().add("timestamp", new ValueTime("2012/11/09 21:13:00.000"));
 		list = Arrays.asList(new Value[] {
-			khaki31Contact, whatever01Contact,
+			pj2
 		});
 		whatever02.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
 		whatever02.getAttributes().add("cardinality", new ValueInt(1l));
 		list = Arrays.asList(new Value[] {
-			whatever02Contact,
+			pj2
 		});
 		whatever02.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
 		whatever02.getAttributes().add("creation", new ValueTime("2012/10/18 07:04:00.000"));
