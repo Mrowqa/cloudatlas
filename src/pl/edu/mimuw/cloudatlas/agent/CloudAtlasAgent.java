@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.util.Duration;
+import java.time.Duration;
 import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
 import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
 import pl.edu.mimuw.cloudatlas.interpreter.QueryResult;

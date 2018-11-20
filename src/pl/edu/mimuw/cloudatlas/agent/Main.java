@@ -17,7 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.util.Duration;
+import java.time.Duration;
 import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
@@ -38,7 +38,7 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  * @author pawel
  */
 public class Main {
-	private static Duration queryDuration = Duration.minutes(5);
+	private static Duration queryDuration = Duration.ofMinutes(5);
 	/**
 	 * @param args the command line arguments
 	 */
@@ -67,13 +67,13 @@ public class Main {
 		int durationValue = Integer.parseInt(args[0].substring(0, args[0].length() - 1));
 		switch(durationUnit) {
 			case 'h': 
-				queryDuration = Duration.hours(durationValue); 
+				queryDuration = Duration.ofHours(durationValue); 
 				break;
 			case 'm':
-				queryDuration = Duration.minutes(durationValue); 
+				queryDuration = Duration.ofMinutes(durationValue); 
 				break;
 			case 's':
-				queryDuration = Duration.seconds(durationValue); 
+				queryDuration = Duration.ofSeconds(durationValue); 
 				break;
 			default:
 				System.err.println("Invalid duration unit, got " + durationUnit + " allowed h|m|s.");
