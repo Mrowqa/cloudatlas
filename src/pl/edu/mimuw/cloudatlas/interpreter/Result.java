@@ -194,9 +194,6 @@ abstract class Result {
 	}
 
 	public Result regExpr(Result right) {
-		try {
-			System.out.println("Regexp " + getValue() + " " + ((ValueString)right.getValue()).getValue());
-		} catch(Exception ex) {}
 		return right.callMe(REG_EXPR, this);
 	}
 

@@ -55,7 +55,6 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 				try {
 					agent.executeQueries();
 					Logger.getLogger(CloudAtlasAgent.class.getName()).log(Level.FINEST, "Queries exectued.");
-					System.out.println("Queries executed");
 					Thread.sleep((long) duration.toMillis());
 				} catch (Exception ex) {
 					Logger.getLogger(CloudAtlasAgent.class.getName()).log(Level.SEVERE, null, ex);
