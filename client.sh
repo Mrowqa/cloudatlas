@@ -4,11 +4,7 @@ dir=${PWD}
 rundir=${dir}/build/classes
 path=${rundir}:${dir}/lib/cup.jar:${dir}/lib/JLex.jar
 
-policy='grant codeBase "file:'
-policy=$policy$rundir
-suffix='" {\n permission java.security.AllPermission;\n};'
-policy=$policy$suffix
-echo $policy > ${rundir}/all.policy
+./gen-policy-file.sh ${rundir}
 
 java -cp ${path} -Djava.rmi.server.codebase=file:${rundir} \
   -Djava.security.policy=all.policy sr_labs.Sr_labs
