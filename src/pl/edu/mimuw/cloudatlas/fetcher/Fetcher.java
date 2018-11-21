@@ -16,7 +16,6 @@ import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import jdk.nashorn.internal.codegen.types.Type;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
@@ -107,6 +106,8 @@ public class Fetcher extends Thread {
 		try {
 			Process p = new ProcessBuilder(cmd).start();
 			if (!p.waitFor(1, TimeUnit.MINUTES)) {
+				p.destroy();
+				Logger.getLogger(Fetcher.class.getName()).log(Level.FINEST, "Command timed out: " + String.join(" ", cmd));
 				throw new InterruptedException("process halted!");
 			}
 			return new Scanner(p.getInputStream()).next();
