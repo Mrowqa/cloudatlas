@@ -24,6 +24,8 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 import javafx.util.Pair;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
+import pl.edu.mimuw.cloudatlas.fetcher.Fetcher;
+import static pl.edu.mimuw.cloudatlas.interpreter.Main.executeQueries;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
@@ -51,7 +53,9 @@ public class Sr_labs {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws ParseException, UnknownHostException, IOException {
+		//testSerialize();
 		testCloudAtlasAgent();
+		//testFetcherDataCollection();
 	}
 	
 	private static void testSerialize() throws ParseException, UnknownHostException, IOException {
@@ -126,7 +130,7 @@ public class Sr_labs {
 						
 						System.out.println("Enter attribute:");
 						ValueString attribute = new ValueString(scanner.next());
-						
+
 						System.out.println("Enter value (only ValueInt)");
 						ValueInt value = new ValueInt(scanner.nextLong());
 						AttributesMap attrs = new AttributesMap();
@@ -201,5 +205,10 @@ public class Sr_labs {
 		System.out.println("6: Set fallback contacts.");
 		System.out.println("7: Get fallback contacts.");
 		System.out.println("Default: exit.");
+	}
+
+	private static void testFetcherDataCollection() {
+		AttributesMap attrs = Fetcher.collectData();
+		System.out.println(attrs);
 	}
 }
