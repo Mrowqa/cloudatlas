@@ -40,6 +40,7 @@ public class ZMI implements Cloneable, Serializable {
 	private final AttributesMap attributes = new AttributesMap();
 	
 	private final List<ZMI> sons = new ArrayList<ZMI>();
+	private PathName pathName;
 	private ZMI father;
 	
 	/**
@@ -48,11 +49,7 @@ public class ZMI implements Cloneable, Serializable {
 	public ZMI() {
 		this(null, null);
 	}
-	
-	public ZMI(ZMI father) {
-		setFather(father);
-		//initRequiredAttributes(null);
-	}
+
 	/**
 	 * Creates a new ZMI with the specified node as a father and empty sons list. This method does not perform any
 	 * operation on the <code>father</code>. Especially, setting this object as a <code>father</code>'s son must be done
@@ -63,6 +60,12 @@ public class ZMI implements Cloneable, Serializable {
 	 */
 	public ZMI(ZMI father, String name) {
 		setFather(father);
+		attributes.add("name", new ValueString(name));
+		if (father == null) {
+			pathName = PathName.ROOT;
+		} else {
+			pathName = father.getPathName().levelDown(name);
+		}
 		//initRequiredAttributes(name);
 	}
 	
@@ -82,6 +85,10 @@ public class ZMI implements Cloneable, Serializable {
 	 */
 	public ZMI getFather() {
 		return father;
+	}
+	
+	public PathName getPathName() {
+		return pathName;
 	}
 	
 	/**
@@ -166,6 +173,15 @@ public class ZMI implements Cloneable, Serializable {
 			ZMI sonClone = son.clone();
 			result.sons.add(sonClone);
 			sonClone.father = result;
+		}
+		return result;
+	}
+	
+	public ValueList getZones() {
+		ValueList result = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
+		result.add(new ValueString(pathName.toString()));
+		for (ZMI son : sons) {
+			result.addAll(son.getZones());
 		}
 		return result;
 	}

@@ -11,10 +11,19 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Map.Entry;
+import java.util.Scanner;
+import javafx.util.Pair;
+import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
@@ -22,9 +31,11 @@ import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.ValueDuration;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
+import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueBoolean;
 import pl.edu.mimuw.cloudatlas.model.ValueContact;
 import pl.edu.mimuw.cloudatlas.model.ValueDouble;
+import pl.edu.mimuw.cloudatlas.model.ValueInt;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
@@ -40,12 +51,8 @@ public class Sr_labs {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws ParseException, UnknownHostException, IOException {
-        // TODO code application logic here
-		
-		testSerialize();
-		//ValueDuration b = new ValueDuration("-2 23:00:00.005");
-		//System.out.println(((ValueString)b.convertTo(TypePrimitive.STRING)).getValue());
-    }
+		testCloudAtlasAgent();
+	}
 	
 	private static void testSerialize() throws ParseException, UnknownHostException, IOException {
 		ZMI root = new ZMI();
@@ -85,5 +92,114 @@ public class Sr_labs {
 		
 		System.out.println("---------------------------");
 		System.out.println(newRoot.toString());
+	}
+	
+	private static void testCloudAtlasAgent() {
+		try {
+            Registry registry = LocateRegistry.getRegistry("localhost");
+            CloudAtlasInterface stub = (CloudAtlasInterface) registry.lookup("CloudAtlas");
+			Scanner scanner = new Scanner(System.in);
+			scanner.useDelimiter("\\n");
+			printTestCloudAtlasMenu();
+			while(scanner.hasNext()) {
+				int op = scanner.nextInt();
+				String arg, query;
+				try {
+				switch (op) {
+					case 1: 
+						ValueList zones = stub.getZones();
+						for (Value zone : zones) {
+							System.out.println(((ValueString)zone).getValue());
+						}
+						break;
+					case 2: 
+						System.out.println("Enter zone:");
+						arg = scanner.next();
+						AttributesMap map = stub.getZoneAttributes(new ValueString(arg));
+						for (Entry<Attribute, Value> entry : map) {
+							System.out.println(entry.getKey() + ": " + entry.getValue());
+						}
+						break;	
+					case 3:
+						System.out.println("Enter zone:");
+						arg = scanner.next();
+						
+						System.out.println("Enter attribute:");
+						ValueString attribute = new ValueString(scanner.next());
+						
+						System.out.println("Enter value (only ValueInt)");
+						ValueInt value = new ValueInt(scanner.nextLong());
+						AttributesMap attrs = new AttributesMap();
+						attrs.add(attribute.getValue(), value);
+						stub.setZoneAttributes(new ValueString(arg), attrs);
+						System.out.println("Value set.");
+						break;
+					case 4: 
+						System.out.println("Enter query name (preceded with &):");
+						arg = scanner.next();
+						ValueList queryNames = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
+						queryNames.add(new ValueString(arg));
+						
+						System.out.println("Enter query:");
+						query = scanner.next();
+						ValueList queries = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
+						queries.add(new ValueString(query));
+						
+						stub.installQueries(queryNames, queries);
+						System.out.println("Query installed.");
+						break;
+					case 5:
+						System.out.println("Enter query name (preceded with &):");
+						arg = scanner.next();
+						ValueList queryNames2 = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
+						queryNames2.add(new ValueString(arg));
+						
+						stub.uninstallQueries(queryNames2);
+						System.out.println("Query uninstalled.");
+						break;
+					case 6:
+						System.out.println("Enter number of contacts:");
+						int n = scanner.nextInt();
+						ValueSet contacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
+						for (int i = 0; i < n; i++) {
+							System.out.println("Enter path name of the contact:");
+							arg = scanner.next();
+							System.out.println("Enter address of the contact:");
+							InetAddress address = InetAddress.getByName(scanner.next());
+							contacts.add(new ValueContact(new PathName(arg), address));
+						}
+						stub.setFallbackContacts(contacts);
+						System.out.println("Fallback contacts set.");
+						break;
+					case 7:
+						ValueSet contacts1 = stub.getFallbackContacts();
+						System.out.println("Fallback contacts:");
+						for (Value contact : contacts1) {
+							System.out.println(contact);
+						}
+						break;
+					default:
+						System.out.println("Unknown operation. Clossing.");
+				}
+				} catch(RemoteException e) {
+					System.out.println("CloudAtlas exception: " + e.getMessage());
+				}
+			}
+			scanner.close();
+        } catch (Exception e) {
+            System.err.println("CloudAtlas exception:");
+            e.printStackTrace();
+        }
+	}
+	
+	private static void printTestCloudAtlasMenu() {
+		System.out.println("1: Get zones.");
+		System.out.println("2: Get attributes.");
+		System.out.println("3: Set value for an attribute.");
+		System.out.println("4: Install query.");
+		System.out.println("5: Uninstall query.");
+		System.out.println("6: Set fallback contacts.");
+		System.out.println("7: Get fallback contacts.");
+		System.out.println("Default: exit.");
 	}
 }

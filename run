@@ -1,3 +1,0 @@
-#!/bin/sh
-
-java -cp $PWD/build/classes/:lib/cup.jar:lib/JLex.jar pl.edu.mimuw.cloudatlas.interpreter.Main
