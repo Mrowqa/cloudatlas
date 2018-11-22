@@ -35,7 +35,8 @@ public class WebClient {
 	public void run() throws IOException {
 		HttpServer server = HttpServer.create(new InetSocketAddress(httpPort), 0);		
 		server.createContext("/history", new HistoryHandler());
-		server.createContext("/", new GetStaticFileHandler("www/index.html", "text/html"));
+		server.createContext("/static", new GetStaticFileHandler());
+		server.createContext("/", new RedirectHandler("/static/index.html"));
 		server.setExecutor(null); // creates a default executor
 		server.start();
 		System.out.println("Started webclient at http://localhost:" + httpPort + "/");
@@ -47,7 +48,24 @@ public class WebClient {
 		// text/javascript (obsolete) 
 	}
 	
+	class RedirectHandler implements HttpHandler {
+		String location;
+		
+		public RedirectHandler(String location) {
+			this.location = location;
+		}
+		
+		@Override
+		public void handle(HttpExchange t) throws IOException {			
+			Headers h = t.getResponseHeaders();
+			h.add("Location", this.location);
+			t.sendResponseHeaders(302, 0);
+			t.getResponseBody().close();
+		}
+	}
+	
 	class HistoryHandler implements HttpHandler {
+		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("GET")) {
 				return;
@@ -71,24 +89,18 @@ public class WebClient {
 	}
 	
 	// https://www.rgagnon.com/javadetails/java-have-a-simple-http-server.html
-	class GetStaticFileHandler implements HttpHandler {
-		String filePath;
-		String contentType;
-		
-		public GetStaticFileHandler(String filePath, String contentType) {
-			this.filePath = filePath;
-			this.contentType = contentType;
-		}
-		
+	static class GetStaticFileHandler implements HttpHandler {		
+		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("GET")) {
 				return;
 			}
 			
-			Headers h = t.getResponseHeaders();
-			h.add("Content-Type", this.contentType);
+			//Headers h = t.getResponseHeaders();
+			//h.add("Content-Type", this.contentType);
 
-			File file = new File(this.filePath);
+			String filepath = "www/" + t.getRequestURI().getPath().substring("/static/".length());
+			File file = new File(filepath);
 			byte [] bytearray  = new byte [(int)file.length()];
 			FileInputStream fis = new FileInputStream(file);
 			BufferedInputStream bis = new BufferedInputStream(fis);
