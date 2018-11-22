@@ -78,6 +78,11 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 	}
 	
 	@Override
+	public synchronized ZMI getWholeZMI() throws RemoteException {
+		return zmi.clone();
+	}
+	
+	@Override
 	public synchronized ValueList getZones() throws RemoteException {
 		return zmi.getZones();
 	}

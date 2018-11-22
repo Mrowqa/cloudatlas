@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 
 /**
@@ -23,18 +25,16 @@ import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
  * @author mrowqa
  */
 public class WebClient {
-	private CloudAtlasInterface rmi;
-	private Duration sleepDuration;
-	private static int httpPort = 8000;
+	final HistoricalDataStorage dataStorage;
+	private final static int httpPort = 8000;
 	
-	public WebClient(CloudAtlasInterface rmi, Duration sleepDuration) {
-		this.rmi = rmi;
-		this.sleepDuration = sleepDuration;
+	public WebClient(HistoricalDataStorage dataStorage) {
+		this.dataStorage = dataStorage;
 	}
 	
 	public void run() throws IOException {
 		HttpServer server = HttpServer.create(new InetSocketAddress(httpPort), 0);		
-		server.createContext("/test", new MyHandler());
+		server.createContext("/history", new HistoryHandler());
 		server.createContext("/", new GetStaticFileHandler("www/index.html", "text/html"));
 		server.setExecutor(null); // creates a default executor
 		server.start();
@@ -47,9 +47,22 @@ public class WebClient {
 		// text/javascript (obsolete) 
 	}
 	
-	static class MyHandler implements HttpHandler {
+	class HistoryHandler implements HttpHandler {
 		public void handle(HttpExchange t) throws IOException {
-			byte [] response = "Welcome Real's HowTo test page".getBytes();
+			if (!t.getRequestMethod().equals("GET")) {
+				return;
+			}
+			
+			Map<String, String> params = WebClient.queryToMap(t.getRequestURI().getQuery());
+			Integer limit = null;
+			if (params.get("limit") != null) {
+				try {
+					limit = Integer.parseInt(params.get("limit"));
+				}
+				catch (NumberFormatException ex) {}
+			}
+			
+			byte [] response = dataStorage.getHistoricalData(limit).getBytes();
 			t.sendResponseHeaders(200, response.length);
 			OutputStream os = t.getResponseBody();
 			os.write(response);
@@ -68,6 +81,10 @@ public class WebClient {
 		}
 		
 		public void handle(HttpExchange t) throws IOException {
+			if (!t.getRequestMethod().equals("GET")) {
+				return;
+			}
+			
 			Headers h = t.getResponseHeaders();
 			h.add("Content-Type", this.contentType);
 
@@ -83,5 +100,27 @@ public class WebClient {
 			os.write(bytearray, 0, bytearray.length);
 			os.close();
 		}
+	}
+	
+	// https://www.rgagnon.com/javadetails/java-get-url-parameters-using-jdk-http-server.html
+	/**
+	* returns the url parameters in a map
+	* @param query
+	* @return map
+	*/
+	public static Map<String, String> queryToMap(String query) {
+		Map<String, String> result = new HashMap<>();
+		if (query != null) {
+			for (String param : query.split("&")) {
+				String pair[] = param.split("=");
+				if (pair.length > 1) {
+					result.put(pair[0], pair[1]);
+				}
+				else {
+					result.put(pair[0], "");
+				}
+			}
+		}
+		return result;
 	}
 }

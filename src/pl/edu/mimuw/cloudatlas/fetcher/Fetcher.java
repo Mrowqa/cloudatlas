@@ -48,7 +48,6 @@ public class Fetcher extends Thread {
 				Logger.getLogger(Fetcher.class.getName()).log(Level.FINEST, "Data collected & set.");
 			}
 			catch (RemoteException ex) {
-				System.err.println();
 				Logger.getLogger(Fetcher.class.getName()).log(Level.SEVERE, "Call to rmi.setZoneAttributes() failed.", ex);
 			}
 

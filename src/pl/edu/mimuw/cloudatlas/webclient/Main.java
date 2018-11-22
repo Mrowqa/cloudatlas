@@ -21,6 +21,7 @@ import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 public class Main {
 
 	private static Duration sleepDuration = Duration.ofMinutes(5);
+	private static Duration dataHistoryLimit = null;
 
 	/**
 	 * @param args the command line arguments
@@ -33,7 +34,9 @@ public class Main {
 		CloudAtlasInterface stub = (CloudAtlasInterface) registry.lookup("CloudAtlas");
 
 		parseCmdArgs(args);
-		WebClient wcl = new WebClient(stub, sleepDuration);
+		HistoricalDataStorage storage = new HistoricalDataStorage(stub, sleepDuration, dataHistoryLimit);
+		WebClient wcl = new WebClient(storage);
+		storage.start();
 		wcl.run();
 	}
 
