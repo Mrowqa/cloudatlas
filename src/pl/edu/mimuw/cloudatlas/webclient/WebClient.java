@@ -38,6 +38,7 @@ public class WebClient {
 		server.createContext("/", new GetStaticFileHandler("www/index.html", "text/html"));
 		server.setExecutor(null); // creates a default executor
 		server.start();
+		System.out.println("Started webclient at http://localhost:" + httpPort + "/");
 		
 		// content types:
 		// https://stackoverflow.com/questions/23714383/what-are-all-the-possible-values-for-http-content-type-header
