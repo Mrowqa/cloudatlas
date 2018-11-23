@@ -115,7 +115,8 @@ public class ZMIJSONSerializer {
 				result += "\"t\":\"st\"";
 				String vv = ((ValueString)v).getValue();
 				if (vv != null) {
-					result += ",\"v\":\"" + vv + "\"";
+					// replaceAll takes regex, hence "\\\\" is actually "match a single \"
+					result += ",\"v\":\"" + vv.replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"") + "\"";
 				}
 				break;
 			case "TIME":
