@@ -105,7 +105,7 @@ public class Sr_labs {
 	}
 	
 	private static void testSerializeJSON() throws ParseException, UnknownHostException {
-		System.out.println(ZMIJSONSerializer.toJSON(ZMIHierarchyBuilder.createDefaultHierarchy()));
+		System.out.println(ZMIJSONSerializer.ZMIToJSON(ZMIHierarchyBuilder.createDefaultHierarchy()));
 	}
 	
 	private static void testCloudAtlasAgent() {

@@ -47,7 +47,7 @@ public class HistoricalDataStorage extends Thread {
 		while (true) {
 			try {
 				ZMI zmi = rmi.getWholeZMI();
-				addNewEntry(new DataEntry(ZMIJSONSerializer.toJSON(zmi)));
+				addNewEntry(new DataEntry(ZMIJSONSerializer.ZMIToJSON(zmi)));
 				Logger.getLogger(Fetcher.class.getName()).log(Level.FINEST, "Added new data entry.");
 			}
 			catch (RemoteException ex) {

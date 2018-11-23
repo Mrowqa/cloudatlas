@@ -35,7 +35,7 @@ public class Main {
 
 		parseCmdArgs(args);
 		HistoricalDataStorage storage = new HistoricalDataStorage(stub, sleepDuration, dataHistoryLimit);
-		WebClient wcl = new WebClient(storage);
+		WebClient wcl = new WebClient(storage, stub);
 		storage.start();
 		wcl.run();
 	}

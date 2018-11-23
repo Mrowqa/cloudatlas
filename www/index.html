@@ -44,9 +44,9 @@
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#zones-list">
+                <a class="nav-link" href="#zone-list">
                   <span data-feather="layers"></span>
-                  Zones list
+                  Zone list
                 </a>
               </li>
             </ul>
@@ -58,7 +58,22 @@
             <h1 class="h2">Install query</h1>
           </div>
           <div>
-             Install query!
+            <form action="/query/install" method="post">
+              <div class="form-group">
+                <label for="query-name">Name</label>
+                  <div class="input-group mb-2">
+                  <div class="input-group-prepend">
+                    <div class="input-group-text">&</div>
+                  </div>
+                  <input type="text" class="form-control" id="query-name" name="query-name" placeholder="Enter query name">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="query-value">Query</label>
+                <input type="text" class="form-control" id="query-value" name="query-value" placeholder="Enter query">
+              </div>
+              <button type="submit" class="btn btn-primary"><span data-feather="zap"></span> Install query</button>
+            </form>
           </div>
           
           
@@ -66,7 +81,18 @@
             <h1 class="h2">Uninstall query</h1>
           </div>
           <div>
-             Uninstall query!
+            <form action="/query/uninstall" method="post">
+              <div class="form-group">
+                <label for="query-name">Name</label>
+                  <div class="input-group mb-2">
+                  <div class="input-group-prepend">
+                    <div class="input-group-text">&</div>
+                  </div>
+                  <input type="text" class="form-control" id="query-name" name="query-name" placeholder="Enter query name">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary"><span data-feather="zap-off"></span> Uninstall query</button>
+            </form>
           </div>
           
           
@@ -74,16 +100,21 @@
             <h1 class="h2">Fallback contacts</h1>
           </div>
           <div>
-             Get.<br/>
-             Set.
+            <div class="form-group">
+              <textarea class="form-control" id="fallback-contacts-input" name="fallback-contacts-input" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <button class="btn btn-primary" id="get-fallback-contacts" type="submit"><span data-feather="download-cloud"></span> Get</button>
+              <button class="btn btn-primary" id="set-fallback-contacts" type="submit"><span data-feather="upload-cloud"></span> Set</button>
+            </div>
           </div>
           
           
-          <div id="zones-list" class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-            <h1 class="h2">Zones list</h1>
+          <div id="zone-list" class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Zone list</h1>
           </div>
-          <div>
-             This. Is. (not?). A. List.
+          <div id="zone-list-content" class="list-group">
+             Loading zones...
           </div>
           
           
@@ -94,7 +125,7 @@
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="jquery-3.3.1.min.js"></script>
     <script src="popper.min.js"></script>
     <script src="bootstrap.min.js"></script>
 
@@ -103,5 +134,7 @@
     <script>
       feather.replace()
     </script>
+    
+    <script src="index.js"></script>
   </body>
 </html>
