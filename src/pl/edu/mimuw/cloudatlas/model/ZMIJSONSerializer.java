@@ -5,17 +5,16 @@
  */
 package pl.edu.mimuw.cloudatlas.model;
 
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import org.json.JSONArray;
 import org.json.JSONObject;
+// JSON "docs": 
+// https://stackoverflow.com/questions/2591098/how-to-parse-json-in-java (https://stackoverflow.com/a/18998203)
+// https://www.geeksforgeeks.org/parse-json-java/
 
 // Note: this code is actually awful. No refactoring unless it's necessary!
 /**

@@ -22,10 +22,10 @@ import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
  * @author mrowqa
  */
 public class HistoricalDataStorage extends Thread {
-	private CloudAtlasInterface rmi;
-	private Duration sleepDuration;
-	private Duration storageLimit;
-	private List<DataEntry> entries = new ArrayList<>();
+	private final CloudAtlasInterface rmi;
+	private final Duration sleepDuration;
+	private final Duration storageLimit;
+	private final List<DataEntry> entries = new ArrayList<>();
 	
 	private class DataEntry {
 		public Instant timestamp;
@@ -43,6 +43,7 @@ public class HistoricalDataStorage extends Thread {
 		this.storageLimit = storageLimit;
 	}
 	
+	@Override
 	public void run() {
 		while (true) {
 			try {

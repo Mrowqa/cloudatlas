@@ -14,21 +14,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
-import java.rmi.RemoteException;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import javax.lang.model.type.PrimitiveType;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
@@ -64,12 +59,6 @@ public class WebClient {
 		server.setExecutor(null); // creates a default executor
 		server.start();
 		System.out.println("Started webclient at http://localhost:" + httpPort + "/");
-		
-		// content types:
-		// https://stackoverflow.com/questions/23714383/what-are-all-the-possible-values-for-http-content-type-header
-		// text/css    
-		// text/html    
-		// text/javascript (obsolete) 
 	}
 	
 	class RedirectHandler implements HttpHandler {
