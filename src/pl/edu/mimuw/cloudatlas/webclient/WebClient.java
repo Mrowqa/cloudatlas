@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
+import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
@@ -53,6 +54,8 @@ public class WebClient {
 		server.createContext("/query/install", new InstallQueryHandler());
 		server.createContext("/query/uninstall", new UninstallQueryHandler());
 		server.createContext("/zones/get", new GetZonesHandler());
+		server.createContext("/zones/attributes/get", new GetZoneAttributesHandler());
+		server.createContext("/zones/attributes/set", new SetZoneAttributesHandler());
 		server.createContext("/fallback-contacts/get", new GetFallbackContactsHandler());
 		server.createContext("/fallback-contacts/set", new SetFallbackContactsHandler());
 		server.createContext("/", new RedirectHandler("/static/index.html"));
@@ -101,29 +104,6 @@ public class WebClient {
 		}
 	}
 	
-	class GetFallbackContactsHandler implements HttpHandler {
-		@Override
-		public void handle(HttpExchange t) throws IOException {
-			if (!t.getRequestMethod().equals("GET")) {
-				return;
-			}
-			
-			String rmiResult;
-			try {
-				rmiResult = ZMIJSONSerializer.ValueToJSON(rmi.getFallbackContacts());
-			}
-			catch (Exception ex) {
-				rmiResult = "Error:\n" + exceptionToString(ex);
-			}
-			
-			byte [] response = rmiResult.getBytes();
-			t.sendResponseHeaders(200, response.length);
-			OutputStream os = t.getResponseBody();
-			os.write(response);
-			os.close();
-		}
-	}
-	
 	class GetZonesHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {
@@ -143,6 +123,84 @@ public class WebClient {
 			
 			byte [] response = rmiResult.getBytes();
 			t.sendResponseHeaders(statusCode, response.length);
+			OutputStream os = t.getResponseBody();
+			os.write(response);
+			os.close();
+		}
+	}
+	
+	class GetZoneAttributesHandler implements HttpHandler {
+		@Override
+		public void handle(HttpExchange t) throws IOException {
+			if (!t.getRequestMethod().equals("GET")) {
+				return;
+			}
+			
+			String request = new Scanner(t.getRequestURI().getQuery()).nextLine();
+			Map<String, String> params = WebClient.queryToMap(request);
+			
+			String rmiResult;
+			try {
+				ValueString zoneName = new ValueString(params.get("zone-name"));
+				rmiResult = ZMIJSONSerializer.AttributesMapToJSON(rmi.getZoneAttributes(zoneName));
+			}
+			catch (Exception ex) {
+				rmiResult = "Error:\n" + exceptionToString(ex);
+			}
+			
+			byte [] response = rmiResult.getBytes();
+			t.sendResponseHeaders(200, response.length);
+			OutputStream os = t.getResponseBody();
+			os.write(response);
+			os.close();
+		}
+	}
+	
+	class SetZoneAttributesHandler implements HttpHandler {
+		@Override
+		public void handle(HttpExchange t) throws IOException {
+			if (!t.getRequestMethod().equals("POST")) {
+				return;
+			}
+			
+			String request = new Scanner(t.getRequestBody()).nextLine();
+			Map<String, String> params = WebClient.queryToMap(request);
+			
+			String rmiResult = "OK";
+			try {
+				ValueString zoneName = new ValueString(params.get("zone-name"));
+				AttributesMap attrs = ZMIJSONSerializer.JSONToAttributesMap(params.get("zone-attrs"));
+				rmi.setZoneAttributes(zoneName, attrs);
+			}
+			catch (Exception ex) {
+				rmiResult = "Error:\n" + exceptionToString(ex);
+			}
+			
+			byte [] response = rmiResult.getBytes();
+			t.sendResponseHeaders(200, response.length);
+			OutputStream os = t.getResponseBody();
+			os.write(response);
+			os.close();
+		}
+	}
+	
+	class GetFallbackContactsHandler implements HttpHandler {
+		@Override
+		public void handle(HttpExchange t) throws IOException {
+			if (!t.getRequestMethod().equals("GET")) {
+				return;
+			}
+			
+			String rmiResult;
+			try {
+				rmiResult = ZMIJSONSerializer.ValueToJSON(rmi.getFallbackContacts());
+			}
+			catch (Exception ex) {
+				rmiResult = "Error:\n" + exceptionToString(ex);
+			}
+			
+			byte [] response = rmiResult.getBytes();
+			t.sendResponseHeaders(200, response.length);
 			OutputStream os = t.getResponseBody();
 			os.write(response);
 			os.close();

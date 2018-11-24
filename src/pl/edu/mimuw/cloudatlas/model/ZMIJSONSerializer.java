@@ -27,32 +27,44 @@ public class ZMIJSONSerializer {
 	public static String ZMIToJSON(ZMI zmi) {
 		String result = new String();
 		result += "[";
-		result = toJSON_visitZMI(zmi, result);
+		result += toJSON_visitZMI(zmi);
 		result = result.substring(0, result.length() - 1);
 		result += "]";
 		return result;
 	}
 	
-	private static String toJSON_visitZMI(ZMI zmi, String result) {
-		result += "{";
-		result += "\"zoneName\":\"" + zmi.getPathName().toString() + "\",\"zoneInfo\":{";
-		
-		for (Entry<Attribute, Value> entry : zmi.getAttributes()) {
-			result = toJSON_visitMapEntry(entry, result);
-		}
-		result = result.substring(0, result.length() - 1);
-		result += "}},";
+	private static String toJSON_visitZMI(ZMI zmi) {
+		String result = "{";
+		result += "\"zoneName\":\"" + zmi.getPathName().toString() + "\",\"zoneAttrs\":";
+		result += AttributesMapToJSON(zmi.getAttributes());
+		result += "},";
 		
 		for(ZMI son : zmi.getSons()) {
-			result = toJSON_visitZMI(son, result);
+			result += toJSON_visitZMI(son);
 		}
 		return result;
 	}
 	
-	private static String toJSON_visitMapEntry(Entry<Attribute, Value> entry, String result) {
-		result += "\"" + entry.getKey().toString() + "\":";
-		result += ValueToJSON(entry.getValue());
+	public static String AttributesMapToJSON(AttributesMap attributes) {
+		String result = "{";
+		
+		for (Entry<Attribute, Value> entry : attributes) {
+			result += "\"" + entry.getKey().toString() + "\":" + ValueToJSON(entry.getValue()) + ",";
+		}
+		result = result.substring(0, result.length() - 1);
+		result += "}";
+		
 		return result;
+	}
+	
+	public static AttributesMap JSONToAttributesMap(String json) {
+		AttributesMap attrs = new AttributesMap();
+		JSONObject obj = new JSONObject(json);
+		for (String key : obj.keySet()) {
+			Value val = JSONToValue_impl(obj.getJSONObject(key));
+			attrs.add(key, val);
+		}
+		return attrs;
 	}
 	
 	public static String ValueToJSON(Value v) {
@@ -150,7 +162,13 @@ public class ZMIJSONSerializer {
 				try {
 					String address = obj.getString("a");
 					if (address.contains("/")) { // could be in format: hostname/1.2.3.4
-						address = address.substring(0, address.lastIndexOf("/"));
+						int sepPos = address.lastIndexOf("/");
+						if (sepPos == 0) {
+							address = address.substring(1);
+						}
+						else {
+							address = address.substring(0, sepPos);
+						}
 					}
 					return new ValueContact(new PathName(obj.getString("n")), InetAddress.getByName(address));
 				}
@@ -160,9 +178,9 @@ public class ZMIJSONSerializer {
 				return new ValueDouble(obj.has("v") ? obj.getDouble("v") : null);
 			case "du": // duration
 				// assert ValueDuration(obj["p"]) == ValueDuration(obj["v"])
-				return new ValueDuration(obj.has("v") ? (long) obj.getInt("v") : null);
+				return new ValueDuration(obj.has("v") ? (long) obj.getLong("v") : null);
 			case "i": // int
-				return new ValueInt(obj.has("v") ? (long) obj.getInt("v") : null);
+				return new ValueInt(obj.has("v") ? (long) obj.getLong("v") : null);
 			case "l": { // list
 				List<Value> coll = new ArrayList<>();
 				if (obj.has("v")) {
@@ -193,7 +211,7 @@ public class ZMIJSONSerializer {
 				return new ValueString(obj.has("v") ? obj.getString("v") : null);
 			case "t": // time
 				// assert ValueTime(obj["p"]) == ValueTime(obj["v"])
-				return new ValueTime(obj.has("v") ? (long) obj.getInt("v") : null);
+				return new ValueTime(obj.has("v") ? (long) obj.getLong("v") : null);
 			default:
 				throw new RuntimeException("Invalid Value type!");
 		}

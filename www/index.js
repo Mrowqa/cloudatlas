@@ -1,7 +1,36 @@
 $(document).ready(function() {
+    $("#install-query-button").click(function() {
+        var queryData = {
+            "query-name": $("#query-name").val(),
+            "query-value": $("#query-value").val()
+        };
+        $.post("/query/install", queryData, function (data) {
+            alert(data);
+            console.log(data);
+        })
+        .fail(function( jqXHR, textStatus, errorThrown ) {
+            alert(textStatus);
+        });
+    });
+
+    $("#uninstall-query-button").click(function() {
+        var queryData = {
+            "query-name": $("#query-name-uninstall").val()
+        };
+        $.post("/query/uninstall", queryData, function (data) {
+            alert(data);
+            console.log(data);
+        })
+        .fail(function( jqXHR, textStatus, errorThrown ) {
+            alert(textStatus);
+        });
+    });
+
+
     $("#get-fallback-contacts").click(function() {
         $.get("/fallback-contacts/get", function (data) {
             $("#fallback-contacts-input").val(data);
+            alert("OK");
         })
         .fail(function( jqXHR, textStatus, errorThrown ) {
             alert(textStatus);

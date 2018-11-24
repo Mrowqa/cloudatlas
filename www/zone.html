@@ -1,1 +1,100 @@
-zone-info
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Zone info</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="dashboard.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+      <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="/">Zones index</a>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+          <div class="sidebar-sticky">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link" href="#info">
+                  <span data-feather="info"></span>
+                  Zone info
+                </a>
+              </li>
+            </ul>
+            
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+              <span>Attributes</span>
+            </h6>
+            <ul class="nav flex-column mb-2">
+              <li class="nav-item">
+                <a class="nav-link" href="#">
+                  <span data-feather="bar-chart-2"></span>
+                  Example
+                </a>
+              </li>
+            </ul>
+            
+          </div>
+        </nav>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+          <div id="info" class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Zone info</h1>
+          </div>
+          <div>
+            <div class="form-group">
+              <div class="input-group mb-2">
+                <div class="input-group-prepend">
+                  <div class="input-group-text">Name</div>
+                </div>
+                <input type="text" class="form-control" id="zone-name" name="zone-name" placeholder="Loading..." disabled>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="info-input">Attributes</label>
+              <textarea class="form-control" id="zone-attrs" name="zone-attrs" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <button class="btn btn-primary" id="get-zone-attrs" type="submit"><span data-feather="download-cloud"></span> Get</button>
+              <button class="btn btn-primary" id="set-zone-attrs" type="submit"><span data-feather="upload-cloud"></span> Set</button>
+            </div>
+          </div>
+          
+          
+          <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Attributes history</h1>
+          </div>
+          <div id="graphs-content" class="list-group">
+             Loading attributes...
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="jquery-3.3.1.min.js"></script>
+    <script src="popper.min.js"></script>
+    <script src="bootstrap.min.js"></script>
+
+    <!-- Icons -->
+    <script src="feather.min.js"></script>
+    <script>
+      feather.replace()
+    </script>
+    
+    <script src="zone.js"></script>
+  </body>
+</html>
