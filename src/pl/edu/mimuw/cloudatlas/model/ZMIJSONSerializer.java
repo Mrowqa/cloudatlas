@@ -10,6 +10,8 @@ import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 import org.json.JSONArray;
 import org.json.JSONObject;
 // JSON "docs": 
@@ -141,9 +143,10 @@ public class ZMIJSONSerializer {
 	
 	private static Value JSONToValue_impl(JSONObject obj) { // todo implement the rest!
 		switch (obj.getString("t").split("\\|")[0]) {
-			case "b":
-				break;
+			case "b": // boolean
+				return new ValueBoolean(obj.has("v") ? obj.getBoolean("v") : null);
 			case "c": // contact
+				// assumption: contact can't be null
 				try {
 					String address = obj.getString("a");
 					if (address.contains("/")) { // could be in format: hostname/1.2.3.4
@@ -153,29 +156,44 @@ public class ZMIJSONSerializer {
 				}
 				catch (UnknownHostException ex) {}
 				break;
-			case "do":
-				break;
-			case "du":
-				break;
-			case "i":
-				break;
-			case "l":
-				break;
+			case "do": // double
+				return new ValueDouble(obj.has("v") ? obj.getDouble("v") : null);
+			case "du": // duration
+				// assert ValueDuration(obj["p"]) == ValueDuration(obj["v"])
+				return new ValueDuration(obj.has("v") ? (long) obj.getInt("v") : null);
+			case "i": // int
+				return new ValueInt(obj.has("v") ? (long) obj.getInt("v") : null);
+			case "l": { // list
+				List<Value> coll = new ArrayList<>();
+				if (obj.has("v")) {
+					JSONArray arr = obj.getJSONArray("v");
+					for (int i = 0; i < arr.length(); i++) {
+						JSONObject elem = arr.getJSONObject(i);
+						coll.add(JSONToValue_impl(elem));
+					}
+				}
+				Type elemType = stringToType(obj.getString("t").substring("l|".length()));
+				return new ValueList(coll, elemType);
+			}
 			case "n":
 				break;
-			case "se": // set
+			case "se": { // set
 				Set<Value> coll = new HashSet<>();
-				JSONArray arr = obj.getJSONArray("v");
-				for (int i = 0; i < arr.length(); i++) {
-					JSONObject elem = arr.getJSONObject(i);
-					coll.add(JSONToValue_impl(elem));
+				if (obj.has("v")) {
+					JSONArray arr = obj.getJSONArray("v");
+					for (int i = 0; i < arr.length(); i++) {
+						JSONObject elem = arr.getJSONObject(i);
+						coll.add(JSONToValue_impl(elem));
+					}
 				}
 				Type elemType = stringToType(obj.getString("t").substring("se|".length()));
 				return new ValueSet(coll, elemType);
-			case "st":
-				break;
-			case "t":
-				break;
+			}
+			case "st": // string
+				return new ValueString(obj.has("v") ? obj.getString("v") : null);
+			case "t": // time
+				// assert ValueTime(obj["p"]) == ValueTime(obj["v"])
+				return new ValueTime(obj.has("v") ? (long) obj.getInt("v") : null);
 			default:
 				throw new RuntimeException("Invalid Value type!");
 		}
