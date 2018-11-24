@@ -153,7 +153,7 @@ public class ZMIJSONSerializer {
 		return JSONToValue_impl(new JSONObject(json));
 	}
 	
-	private static Value JSONToValue_impl(JSONObject obj) { // todo implement the rest!
+	private static Value JSONToValue_impl(JSONObject obj) {
 		switch (obj.getString("t").split("\\|")[0]) {
 			case "b": // boolean
 				return new ValueBoolean(obj.has("v") ? obj.getBoolean("v") : null);
