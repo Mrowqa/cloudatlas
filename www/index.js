@@ -1,4 +1,13 @@
 $(document).ready(function() {
+    function prettifyJSON(str) {
+        try {
+            return JSON.stringify(JSON.parse(str), null, 2);
+        }
+        catch (err) {
+            return str;
+        }
+    }
+
     $("#install-query-button").click(function() {
         var queryData = {
             "query-name": $("#query-name").val(),
@@ -26,10 +35,9 @@ $(document).ready(function() {
         });
     });
 
-
     $("#get-fallback-contacts").click(function() {
         $.get("/fallback-contacts/get", function (data) {
-            $("#fallback-contacts-input").val(data);
+            $("#fallback-contacts-input").val(prettifyJSON(data));
             alert("OK");
         })
         .fail(function( jqXHR, textStatus, errorThrown ) {

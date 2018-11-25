@@ -2,9 +2,18 @@ $(document).ready(function() {
     zoneName = document.URL.match(/zone=([a-zA-Z0-9_\/]+)/)[1]; // global variable
     $('#zone-name').val(zoneName);
 
+    function prettifyJSON(str) {
+        try {
+            return JSON.stringify(JSON.parse(str), null, 2);
+        }
+        catch (err) {
+            return str;
+        }
+    }
+
     $("#get-zone-attrs").click(function() {
         $.get("/zones/attributes/get?zone-name=" + zoneName, function (data) {
-            $("#zone-attrs").val(data);
+            $("#zone-attrs").val(prettifyJSON(data));
             alert("OK");
         })
         .fail(function( jqXHR, textStatus, errorThrown ) {
