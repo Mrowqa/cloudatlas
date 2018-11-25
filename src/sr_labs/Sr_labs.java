@@ -18,8 +18,10 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Scanner;
 import javafx.util.Pair;
@@ -40,7 +42,10 @@ import pl.edu.mimuw.cloudatlas.model.ValueDouble;
 import pl.edu.mimuw.cloudatlas.model.ValueInt;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
+import pl.edu.mimuw.cloudatlas.model.ValueTime;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
+import pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder;
+import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
 import pl.edu.mimuw.cloudatlas.model.ZMISerializer;
 
 /**
@@ -54,6 +59,7 @@ public class Sr_labs {
      */
     public static void main(String[] args) throws ParseException, UnknownHostException, IOException {
 		//testSerialize();
+		//testSerializeJSON();
 		testCloudAtlasAgent();
 		//testFetcherDataCollection();
 	}
@@ -96,6 +102,25 @@ public class Sr_labs {
 		
 		System.out.println("---------------------------");
 		System.out.println(newRoot.toString());
+	}
+	
+	private static void testSerializeJSON() throws ParseException, UnknownHostException {
+		ZMI zmi = ZMIHierarchyBuilder.createDefaultHierarchy();
+		List<AttributesMap> attrsMapList = new ArrayList<>();
+		collectAttributesMaps(zmi, attrsMapList);
+		for (AttributesMap attrs : attrsMapList) {
+			String serialized = ZMIJSONSerializer.attributesMapToJSON(attrs);
+			String doubleSerialized = ZMIJSONSerializer.attributesMapToJSON(ZMIJSONSerializer.JSONToAttributesMap(serialized));
+			assert (serialized.equals(doubleSerialized));
+		}
+		System.out.println("OK");
+	}
+	
+	private static void collectAttributesMaps(ZMI zmi, List<AttributesMap> attrs) {
+		attrs.add(zmi.getAttributes());
+		for (ZMI son : zmi.getSons()) {
+			collectAttributesMaps(son, attrs);
+		}
 	}
 	
 	private static void testCloudAtlasAgent() {

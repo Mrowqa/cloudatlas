@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Zones index</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="dashboard.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+      <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="/">Zones index</a>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+          <div class="sidebar-sticky">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link" href="#install-query">
+                  <span data-feather="zap"></span>
+                  Install query
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#uninstall-query">
+                  <span data-feather="zap-off"></span>
+                  Uninstall query
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#fallback-contacts">
+                  <span data-feather="anchor"></span>
+                  Fallback contacts
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#zone-list">
+                  <span data-feather="layers"></span>
+                  Zone list
+                </a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+          <div id="install-query" class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Install query</h1>
+          </div>
+          <div>
+            <div class="form-group">
+              <label for="query-name">Name</label>
+              <div class="input-group mb-2">
+                <div class="input-group-prepend">
+                  <div class="input-group-text">&</div>
+                </div>
+                <input type="text" class="form-control" id="query-name" name="query-name" placeholder="Enter query name">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="query-value">Query</label>
+              <input type="text" class="form-control" id="query-value" name="query-value" placeholder="Enter query">
+            </div>
+            <button id="install-query-button" class="btn btn-primary"><span data-feather="zap"></span> Install query</button>
+          </div>
+          
+          
+          <div id="uninstall-query" class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Uninstall query</h1>
+          </div>
+          <div>
+            <div class="form-group">
+              <label for="query-name">Name</label>
+                <div class="input-group mb-2">
+                <div class="input-group-prepend">
+                  <div class="input-group-text">&</div>
+                </div>
+                <input type="text" class="form-control" id="query-name-uninstall" name="query-name" placeholder="Enter query name">
+              </div>
+            </div>
+            <button id="uninstall-query-button" class="btn btn-primary"><span data-feather="zap-off"></span> Uninstall query</button>
+          </div>
+          
+          
+          <div id="fallback-contacts" class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Fallback contacts</h1>
+          </div>
+          <div>
+            <div class="form-group">
+              <textarea class="form-control" id="fallback-contacts-input" name="fallback-contacts-input" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <button class="btn btn-primary" id="get-fallback-contacts" type="submit"><span data-feather="download-cloud"></span> Get</button>
+              <button class="btn btn-primary" id="set-fallback-contacts" type="submit"><span data-feather="upload-cloud"></span> Set</button>
+            </div>
+          </div>
+          
+          
+          <div id="zone-list" class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Zone list</h1>
+          </div>
+          <div id="zone-list-content" class="list-group">
+             Loading zones...
+          </div>
+          
+          
+        </main>
+      </div>
+    </div>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="jquery-3.3.1.min.js"></script>
+    <script src="popper.min.js"></script>
+    <script src="bootstrap.min.js"></script>
+
+    <!-- Icons -->
+    <script src="feather.min.js"></script>
+    <script>
+      feather.replace()
+    </script>
+    
+    <script src="index.js"></script>
+  </body>
+</html>

@@ -13,13 +13,16 @@ import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
+import pl.edu.mimuw.cloudatlas.model.ZMI;
 
 /**
  *
  * @author pawel
  */
 public interface CloudAtlasInterface extends Remote {
-	public ValueList getZones()throws RemoteException;
+	public ZMI getWholeZMI() throws RemoteException;
+	
+	public ValueList getZones() throws RemoteException;
 	
 	/**
 	 * Returns attributes map for given zone.
