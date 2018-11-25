@@ -23,7 +23,7 @@ Envinronment
 Tested on Ubuntu 18.10 with Oracle Java 1.8.
 
 
-Running the system (sripts)
+Running the system (scripts)
 ---------------------------
 
 All scripts should be run from the root directory (where the scripts are).
