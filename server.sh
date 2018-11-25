@@ -9,4 +9,4 @@ path=${rundir}:${dir}/lib/cup.jar:${dir}/lib/JLex.jar
 
 cd build/classes && java -cp ${path} -Djava.rmi.server.codebase=file:${rundir} \
   -Djava.rmi.server.hostname=localhost -Djava.security.policy=all.policy \
-  pl.edu.mimuw.cloudatlas.agent.Main $1
+  pl.edu.mimuw.cloudatlas.agent.Main $@

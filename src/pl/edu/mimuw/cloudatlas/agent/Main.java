@@ -8,29 +8,10 @@ package pl.edu.mimuw.cloudatlas.agent;
 
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.rmi.server.UnicastRemoteObject;
-import java.text.ParseException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.time.Duration;
-import pl.edu.mimuw.cloudatlas.model.PathName;
-import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
-import pl.edu.mimuw.cloudatlas.model.Value;
-import pl.edu.mimuw.cloudatlas.model.ValueBoolean;
-import pl.edu.mimuw.cloudatlas.model.ValueContact;
-import pl.edu.mimuw.cloudatlas.model.ValueDouble;
-import pl.edu.mimuw.cloudatlas.model.ValueDuration;
-import pl.edu.mimuw.cloudatlas.model.ValueInt;
-import pl.edu.mimuw.cloudatlas.model.ValueList;
-import pl.edu.mimuw.cloudatlas.model.ValueSet;
-import pl.edu.mimuw.cloudatlas.model.ValueString;
-import pl.edu.mimuw.cloudatlas.model.ValueTime;
-import pl.edu.mimuw.cloudatlas.model.ZMI;
 import pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder;
 
 
@@ -44,7 +25,7 @@ public class Main {
 	 * @param args the command line arguments
 	 */
 	public static void main(String[] args) {
-		parseDuration(args);
+		parseArgs(args);
 		if (System.getSecurityManager() == null) {
             System.setSecurityManager(new SecurityManager());
         }
@@ -60,12 +41,16 @@ public class Main {
 		}
 	}
 	
-	private static void parseDuration(String[] args) {
-		if (args.length < 1) {
+	private static void parseArgs(String[] args) {
+		if (args.length == 0) {
 			return;
 		}
-		char durationUnit = args[0].charAt(args[0].length() - 1);
-		int durationValue = Integer.parseInt(args[0].substring(0, args[0].length() - 1));
+		if (args.length != 2 || !args[0].equals("--sleep")) {
+			System.err.println("Usage: <me> --sleep <num>(h|m|s)");
+			System.exit(1);
+		}
+		char durationUnit = args[1].charAt(args[1].length() - 1);
+		int durationValue = Integer.parseInt(args[1].substring(0, args[1].length() - 1));
 		switch(durationUnit) {
 			case 'h': 
 				queryDuration = Duration.ofHours(durationValue); 
