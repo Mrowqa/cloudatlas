@@ -27,29 +27,29 @@ public class ZMIJSONSerializer {
 	public static String ZMIToJSON(ZMI zmi) {
 		String result = new String();
 		result += "[";
-		result += toJSON_visitZMI(zmi);
+		result += ZMIToJSONVisitZMI(zmi);
 		result = result.substring(0, result.length() - 1);
 		result += "]";
 		return result;
 	}
 	
-	private static String toJSON_visitZMI(ZMI zmi) {
+	private static String ZMIToJSONVisitZMI(ZMI zmi) {
 		String result = "{";
 		result += "\"zoneName\":\"" + zmi.getPathName().toString() + "\",\"zoneAttrs\":";
-		result += AttributesMapToJSON(zmi.getAttributes());
+		result += attributesMapToJSON(zmi.getAttributes());
 		result += "},";
 		
 		for(ZMI son : zmi.getSons()) {
-			result += toJSON_visitZMI(son);
+			result += ZMIToJSONVisitZMI(son);
 		}
 		return result;
 	}
 	
-	public static String AttributesMapToJSON(AttributesMap attributes) {
+	public static String attributesMapToJSON(AttributesMap attributes) {
 		String result = "{";
 		
 		for (Entry<Attribute, Value> entry : attributes) {
-			result += "\"" + entry.getKey().toString() + "\":" + ValueToJSON(entry.getValue()) + ",";
+			result += "\"" + entry.getKey().toString() + "\":" + valueToJSON(entry.getValue()) + ",";
 		}
 		result = result.substring(0, result.length() - 1);
 		result += "}";
@@ -61,13 +61,13 @@ public class ZMIJSONSerializer {
 		AttributesMap attrs = new AttributesMap();
 		JSONObject obj = new JSONObject(json);
 		for (String key : obj.keySet()) {
-			Value val = JSONToValue_impl(obj.getJSONObject(key));
+			Value val = JSONToValueImpl(obj.getJSONObject(key));
 			attrs.add(key, val);
 		}
 		return attrs;
 	}
 	
-	public static String ValueToJSON(Value v) {
+	public static String valueToJSON(Value v) {
 		String result = "{";
 		result += "\"t\":\"" + typeToString(v.getType()) + "\"";
 		switch(v.getType().toString().split(" ")[0]) {
@@ -105,7 +105,7 @@ public class ZMIJSONSerializer {
 				try {
 					result += ",\"v\":[";
 					for (Value vSon : ((ValueList)v).getValue()) {
-						result += ValueToJSON(vSon) + ",";
+						result += valueToJSON(vSon) + ",";
 					}
 					if (result.charAt(result.length() - 1) == ',') {
 						result = result.substring(0, result.length() - 1);
@@ -120,7 +120,7 @@ public class ZMIJSONSerializer {
 				try {
 					result += ",\"v\":[";
 					for (Value vSon : ((ValueSet)v).getValue()) {
-						result += ValueToJSON(vSon) + ",";
+						result += valueToJSON(vSon) + ",";
 					}
 					if (result.charAt(result.length() - 1) == ',') {
 						result = result.substring(0, result.length() - 1);
@@ -150,10 +150,10 @@ public class ZMIJSONSerializer {
 	}
 	
 	public static Value JSONToValue(String json) {
-		return JSONToValue_impl(new JSONObject(json));
+		return JSONToValueImpl(new JSONObject(json));
 	}
 	
-	private static Value JSONToValue_impl(JSONObject obj) {
+	private static Value JSONToValueImpl(JSONObject obj) {
 		switch (obj.getString("t").split("\\|")[0]) {
 			case "b": // boolean
 				return new ValueBoolean(obj.has("v") ? obj.getBoolean("v") : null);
@@ -187,7 +187,7 @@ public class ZMIJSONSerializer {
 					JSONArray arr = obj.getJSONArray("v");
 					for (int i = 0; i < arr.length(); i++) {
 						JSONObject elem = arr.getJSONObject(i);
-						coll.add(JSONToValue_impl(elem));
+						coll.add(JSONToValueImpl(elem));
 					}
 				}
 				Type elemType = stringToType(obj.getString("t").substring("l|".length()));
@@ -201,7 +201,7 @@ public class ZMIJSONSerializer {
 					JSONArray arr = obj.getJSONArray("v");
 					for (int i = 0; i < arr.length(); i++) {
 						JSONObject elem = arr.getJSONObject(i);
-						coll.add(JSONToValue_impl(elem));
+						coll.add(JSONToValueImpl(elem));
 					}
 				}
 				Type elemType = stringToType(obj.getString("t").substring("se|".length()));

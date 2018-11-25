@@ -38,8 +38,8 @@ import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
  * @author mrowqa
  */
 public class WebClient {
-	final CloudAtlasInterface rmi;
-	final HistoricalDataStorage dataStorage;
+	private final CloudAtlasInterface rmi;
+	private final HistoricalDataStorage dataStorage;
 	private final static int httpPort = 8000;
 	
 	public WebClient(HistoricalDataStorage dataStorage, CloudAtlasInterface rmi) {
@@ -64,8 +64,8 @@ public class WebClient {
 		System.out.println("Started webclient at http://localhost:" + httpPort + "/");
 	}
 	
-	class RedirectHandler implements HttpHandler {
-		String location;
+	private class RedirectHandler implements HttpHandler {
+		private String location;
 		
 		public RedirectHandler(String location) {
 			this.location = location;
@@ -80,7 +80,7 @@ public class WebClient {
 		}
 	}
 	
-	class HistoryHandler implements HttpHandler {
+	private class HistoryHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("GET")) {
@@ -96,15 +96,11 @@ public class WebClient {
 				catch (NumberFormatException ex) {}
 			}
 			
-			byte [] response = dataStorage.getHistoricalData(limit).getBytes();
-			t.sendResponseHeaders(200, response.length);
-			OutputStream os = t.getResponseBody();
-			os.write(response);
-			os.close();
+			WebClient.sendResponse(t, 200, dataStorage.getHistoricalData(limit));
 		}
 	}
 	
-	class GetZonesHandler implements HttpHandler {
+	private class GetZonesHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("GET")) {
@@ -114,22 +110,18 @@ public class WebClient {
 			String rmiResult;
 			int statusCode = 200;
 			try {
-				rmiResult = ZMIJSONSerializer.ValueToJSON(rmi.getZones());
+				rmiResult = ZMIJSONSerializer.valueToJSON(rmi.getZones());
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
 				statusCode = 400;
 			}
 			
-			byte [] response = rmiResult.getBytes();
-			t.sendResponseHeaders(statusCode, response.length);
-			OutputStream os = t.getResponseBody();
-			os.write(response);
-			os.close();
+			WebClient.sendResponse(t, statusCode, rmiResult);
 		}
 	}
 	
-	class GetZoneAttributesHandler implements HttpHandler {
+	private class GetZoneAttributesHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("GET")) {
@@ -142,21 +134,17 @@ public class WebClient {
 			String rmiResult;
 			try {
 				ValueString zoneName = new ValueString(params.get("zone-name"));
-				rmiResult = ZMIJSONSerializer.AttributesMapToJSON(rmi.getZoneAttributes(zoneName));
+				rmiResult = ZMIJSONSerializer.attributesMapToJSON(rmi.getZoneAttributes(zoneName));
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
 			}
 			
-			byte [] response = rmiResult.getBytes();
-			t.sendResponseHeaders(200, response.length);
-			OutputStream os = t.getResponseBody();
-			os.write(response);
-			os.close();
+			WebClient.sendResponse(t, 200, rmiResult);
 		}
 	}
 	
-	class SetZoneAttributesHandler implements HttpHandler {
+	private class SetZoneAttributesHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("POST")) {
@@ -176,15 +164,11 @@ public class WebClient {
 				rmiResult = "Error:\n" + exceptionToString(ex);
 			}
 			
-			byte [] response = rmiResult.getBytes();
-			t.sendResponseHeaders(200, response.length);
-			OutputStream os = t.getResponseBody();
-			os.write(response);
-			os.close();
+			WebClient.sendResponse(t, 200, rmiResult);
 		}
 	}
 	
-	class GetFallbackContactsHandler implements HttpHandler {
+	private class GetFallbackContactsHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("GET")) {
@@ -193,21 +177,17 @@ public class WebClient {
 			
 			String rmiResult;
 			try {
-				rmiResult = ZMIJSONSerializer.ValueToJSON(rmi.getFallbackContacts());
+				rmiResult = ZMIJSONSerializer.valueToJSON(rmi.getFallbackContacts());
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
 			}
 			
-			byte [] response = rmiResult.getBytes();
-			t.sendResponseHeaders(200, response.length);
-			OutputStream os = t.getResponseBody();
-			os.write(response);
-			os.close();
+			WebClient.sendResponse(t, 200, rmiResult);
 		}
 	}
 	
-	class SetFallbackContactsHandler implements HttpHandler {
+	private class SetFallbackContactsHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("POST")) {
@@ -226,15 +206,11 @@ public class WebClient {
 				rmiResult = "Error:\n" + exceptionToString(ex);
 			}
 			
-			byte [] response = rmiResult.getBytes();
-			t.sendResponseHeaders(200, response.length);
-			OutputStream os = t.getResponseBody();
-			os.write(response);
-			os.close();
+			WebClient.sendResponse(t, 200, rmiResult);
 		}
 	}
 	
-	class InstallQueryHandler implements HttpHandler {
+	private class InstallQueryHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("POST")) {
@@ -258,15 +234,11 @@ public class WebClient {
 			}
 
 			// ok, we are ready to send the response.
-			byte [] response = rmiResult.getBytes();
-			t.sendResponseHeaders(200, response.length);
-			OutputStream os = t.getResponseBody();
-			os.write(response);
-			os.close();
+			WebClient.sendResponse(t, 200, rmiResult);
 		}
 	}
 	
-	class UninstallQueryHandler implements HttpHandler {
+	private class UninstallQueryHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("POST")) {
@@ -288,24 +260,17 @@ public class WebClient {
 			}
 
 			// ok, we are ready to send the response.
-			byte [] response = rmiResult.getBytes();
-			t.sendResponseHeaders(200, response.length);
-			OutputStream os = t.getResponseBody();
-			os.write(response);
-			os.close();
+			WebClient.sendResponse(t, 200, rmiResult);
 		}
 	}
 	
 	// https://www.rgagnon.com/javadetails/java-have-a-simple-http-server.html
-	static class GetStaticFileHandler implements HttpHandler {		
+	private static class GetStaticFileHandler implements HttpHandler {		
 		@Override
 		public void handle(HttpExchange t) throws IOException {
 			if (!t.getRequestMethod().equals("GET")) {
 				return;
 			}
-			
-			//Headers h = t.getResponseHeaders();
-			//h.add("Content-Type", this.contentType);
 
 			String filepath = "www/" + t.getRequestURI().getPath().substring("/static/".length());
 			File file = new File(filepath);
@@ -328,7 +293,7 @@ public class WebClient {
 	* @param query
 	* @return map
 	*/
-	public static Map<String, String> queryToMap(String query) {
+	private static Map<String, String> queryToMap(String query) {
 		Map<String, String> result = new HashMap<>();
 		if (query != null) {
 			for (String param : query.split("&")) {
@@ -350,6 +315,14 @@ public class WebClient {
 	private static String exceptionToString(Exception ex) {
 		ByteArrayOutputStream out = new ByteArrayOutputStream(); 
 		ex.printStackTrace(new PrintStream(out));
-		return new String(out.toByteArray());
+		return out.toString();
+	}
+	
+	private static void sendResponse(HttpExchange t, int statusCode, String response) throws IOException  {
+		byte [] responseBytes = response.getBytes();
+		t.sendResponseHeaders(statusCode, responseBytes.length);
+		OutputStream os = t.getResponseBody();
+		os.write(responseBytes);
+		os.close();
 	}
 }
