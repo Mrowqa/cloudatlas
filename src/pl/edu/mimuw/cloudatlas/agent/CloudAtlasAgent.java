@@ -15,6 +15,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Set;
+import pl.edu.mimuw.cloudatlas.interpreter.AttributesExtractor;
 import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
 import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
 import pl.edu.mimuw.cloudatlas.interpreter.QueryResult;
@@ -29,6 +31,7 @@ import pl.edu.mimuw.cloudatlas.model.TypeCollection;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
+import pl.edu.mimuw.cloudatlas.model.ValueNull;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
@@ -175,7 +178,12 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 			}
 			for (ValueString query : queries) {
 				try {
-					List<QueryResult> result = interpreter.interpretProgram(tryParse(query.getValue()));
+					Program program = tryParse(query.getValue());
+					Set<String> attributes = AttributesExtractor.extractAttributes(program);
+					for (String attribute : attributes) {
+						zmi.getAttributes().addOrChange(attribute, ValueNull.getInstance());
+					}
+					List<QueryResult> result = interpreter.interpretProgram(program);
 					for (QueryResult r : result) {
 						zmi.getAttributes().addOrChange(r.getName(), r.getValue());
 					}
