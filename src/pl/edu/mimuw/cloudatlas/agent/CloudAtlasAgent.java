@@ -14,6 +14,7 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.time.Duration;
+import java.util.ArrayList;
 import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
 import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
 import pl.edu.mimuw.cloudatlas.interpreter.QueryResult;
@@ -155,12 +156,14 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 			for(ZMI son : zmi.getSons())
 				executeQueries(son);
 			Interpreter interpreter = new Interpreter(zmi);
+			ArrayList<ValueString> queries = new ArrayList<>();
 			for (Entry<Attribute, Value> entry : zmi.getAttributes()) {
-				if (!Attribute.isQuery(entry.getKey())) {
-					continue;
+				if (Attribute.isQuery(entry.getKey())) {
+					queries.add((ValueString)entry.getValue());
 				}
-				String query = ((ValueString)entry.getValue()).getValue();
-				Yylex lex = new Yylex(new ByteArrayInputStream(query.getBytes()));
+			}
+			for (ValueString query : queries) {
+				Yylex lex = new Yylex(new ByteArrayInputStream(query.getValue().getBytes()));
 				try {
 					List<QueryResult> result = interpreter.interpretProgram((new parser(lex)).pProgram());
 					for (QueryResult r : result) {
