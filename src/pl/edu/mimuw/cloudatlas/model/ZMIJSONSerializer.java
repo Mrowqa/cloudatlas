@@ -15,102 +15,111 @@ import java.util.ArrayList;
 import org.json.JSONArray;
 import org.json.JSONObject;
 // JSON "docs": 
+// https://stleary.github.io/JSON-java/
 // https://stackoverflow.com/questions/2591098/how-to-parse-json-in-java (https://stackoverflow.com/a/18998203)
 // https://www.geeksforgeeks.org/parse-json-java/
 
-// Note: this code is actually awful. No refactoring unless it's necessary!
 /**
  *
  * @author mrowqa
  */
-public class ZMIJSONSerializer {	
-	public static String ZMIToJSON(ZMI zmi) {
-		String result = new String();
-		result += "[";
-		result += ZMIToJSONVisitZMI(zmi);
-		result = result.substring(0, result.length() - 1);
-		result += "]";
-		return result;
+public class ZMIJSONSerializer {
+	public static String ZMIToJSONString(ZMI zmi) {
+		return ZMIToJSON(zmi).toString();
 	}
 	
-	private static String ZMIToJSONVisitZMI(ZMI zmi) {
-		String result = "{";
-		result += "\"zoneName\":\"" + zmi.getPathName().toString() + "\",\"zoneAttrs\":";
-		result += attributesMapToJSON(zmi.getAttributes());
-		result += "},";
+	public static JSONArray ZMIToJSON(ZMI zmi) {
+		JSONArray arr = new JSONArray();
+		ZMIToJSONVisitZMI(zmi, arr);
+		return arr;
+	}
+	
+	private static void ZMIToJSONVisitZMI(ZMI zmi, JSONArray arr) {
+		JSONObject obj = new JSONObject();
+		obj.put("zoneName", zmi.getPathName().toString());
+		obj.put("zoneAttrs", attributesMapToJSON(zmi.getAttributes()));
+		arr.put(obj);
 		
 		for(ZMI son : zmi.getSons()) {
-			result += ZMIToJSONVisitZMI(son);
+			ZMIToJSONVisitZMI(son, arr);
 		}
-		return result;
 	}
 	
-	public static String attributesMapToJSON(AttributesMap attributes) {
-		String result = "{";
-		
+	public static String attributesMapToJSONString(AttributesMap attributes) {		
+		return attributesMapToJSON(attributes).toString();
+	}
+	
+	public static JSONObject attributesMapToJSON(AttributesMap attributes) {
+		JSONObject obj = new JSONObject();
 		for (Entry<Attribute, Value> entry : attributes) {
-			result += "\"" + entry.getKey().toString() + "\":" + valueToJSON(entry.getValue()) + ",";
+			obj.put(entry.getKey().toString(), valueToJSON(entry.getValue()));
 		}
-		result = result.substring(0, result.length() - 1);
-		result += "}";
-		
-		return result;
+		return obj;
 	}
 	
-	public static AttributesMap JSONToAttributesMap(String json) {
+	public static AttributesMap JSONStringToAttributesMap(String json) {
 		AttributesMap attrs = new AttributesMap();
 		JSONObject obj = new JSONObject(json);
 		for (String key : obj.keySet()) {
-			Value val = JSONToValueImpl(obj.getJSONObject(key));
+			Value val = JSONToValue(obj.getJSONObject(key));
 			attrs.add(key, val);
 		}
 		return attrs;
 	}
 	
-	public static String valueToJSON(Value v) {
-		String result = "{";
-		result += "\"t\":\"" + typeToString(v.getType()) + "\"";
+	public static String valueToJSONString(Value v) {
+		return valueToJSON(v).toString();
+	}
+	
+	public static JSONObject valueToJSON(Value v) {
+		JSONObject obj = new JSONObject();
+		obj.put("t", typeToString(v.getType()));
 		switch(v.getType().toString().split(" ")[0]) {
 			case "BOOLEAN":
 				try {
-					result += ",\"v\":" + (((ValueBoolean)v).getValue() ? "true" : "false");
+					obj.put("v", ((ValueBoolean)v).getValue());
 				}
 				catch (NullPointerException ex) {}
 				break;
 			case "CONTACT":
 				try {
-					result += ",\"n\":\"" + ((ValueContact)v).getName().toString() + "\",\"a\":\"" + ((ValueContact)v).getAddress().toString() + "\"";
+					// two steps, because we want to add both or neither
+					String name = ((ValueContact)v).getName().toString();
+					String address = ((ValueContact)v).getAddress().toString();
+					obj.put("n", name);
+					obj.put("a", address);
 				}
 				catch (NullPointerException ex) {}
 				break;
 			case "DOUBLE":
 				try {
-					result += ",\"v\":" + ((ValueDouble)v).getValue().toString();
+					obj.put("v", ((ValueDouble)v).getValue());
 				}
 				catch (NullPointerException ex) {}
 				break;
 			case "DURATION":
 				try {
-					result += ",\"v\":" + ((ValueDuration)v).getValue().toString() + ",\"p\":\"" + ((ValueDuration)v).toString() + "\"";
+					// two steps, because we want to add both or neither
+					long value = ((ValueDuration)v).getValue();
+					String pretty = ((ValueDuration)v).toString();
+					obj.put("v", value);
+					obj.put("p", pretty);
 				}
 				catch (NullPointerException ex) {}
 				break;
 			case "INT":
 				try {
-					result += ",\"v\":" + ((ValueInt)v).getValue().toString();
+					obj.put("v", ((ValueInt)v).getValue());
 				}
 				catch (NullPointerException ex) {}
 				break;
 			case "LIST":
 				try {
-					result += ",\"v\":[";
+					JSONArray arr = new JSONArray();
 					for (Value vSon : ((ValueList)v).getValue()) {
-						result += valueToJSON(vSon) + ",";
+						arr.put(valueToJSON(vSon));
 					}
-					if (result.charAt(result.length() - 1) == ',') {
-						result = result.substring(0, result.length() - 1);
-					}
-					result += "]";
+					obj.put("v", arr);
 				}
 				catch (NullPointerException ex) {}
 				break;
@@ -118,42 +127,41 @@ public class ZMIJSONSerializer {
 				break;
 			case "SET":
 				try {
-					result += ",\"v\":[";
+					JSONArray arr = new JSONArray();
 					for (Value vSon : ((ValueSet)v).getValue()) {
-						result += valueToJSON(vSon) + ",";
+						arr.put(valueToJSON(vSon));
 					}
-					if (result.charAt(result.length() - 1) == ',') {
-						result = result.substring(0, result.length() - 1);
-					}
-					result += "]";
+					obj.put("v", arr);
 				}
 				catch (NullPointerException ex) {}
 				break;
 			case "STRING":
-				String vv = ((ValueString)v).getValue();
-				if (vv != null) {
-					// replaceAll takes regex, hence "\\\\" is actually "match a single \"
-					result += ",\"v\":\"" + vv.replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"") + "\"";
+				try {
+					obj.put("v", ((ValueString)v).getValue());
 				}
+				catch (NullPointerException ex) {}
 				break;
 			case "TIME":
 				try {
-					result += ",\"v\":" + ((ValueTime)v).getValue().toString() + ",\"p\":\"" + ((ValueTime)v).toString() + "\"";
+					// two steps, because we want to add both or neither
+					long value = ((ValueTime)v).getValue();
+					String pretty = ((ValueTime)v).toString();
+					obj.put("v", value);
+					obj.put("p", pretty);
 				}
 				catch (NullPointerException ex) {}
 				break;
 			default:
 				throw new IllegalArgumentException("Invalid Value type!");
 		}
-		result += "}";
-		return result;
+		return obj;
 	}
 	
-	public static Value JSONToValue(String json) {
-		return JSONToValueImpl(new JSONObject(json));
+	public static Value JSONStringToValue(String json) {
+		return JSONToValue(new JSONObject(json));
 	}
 	
-	private static Value JSONToValueImpl(JSONObject obj) {
+	public static Value JSONToValue(JSONObject obj) {
 		switch (obj.getString("t").split("\\|")[0]) {
 			case "b": // boolean
 				return new ValueBoolean(obj.has("v") ? obj.getBoolean("v") : null);
@@ -187,7 +195,7 @@ public class ZMIJSONSerializer {
 					JSONArray arr = obj.getJSONArray("v");
 					for (int i = 0; i < arr.length(); i++) {
 						JSONObject elem = arr.getJSONObject(i);
-						coll.add(JSONToValueImpl(elem));
+						coll.add(JSONToValue(elem));
 					}
 				}
 				Type elemType = stringToType(obj.getString("t").substring("l|".length()));
@@ -201,7 +209,7 @@ public class ZMIJSONSerializer {
 					JSONArray arr = obj.getJSONArray("v");
 					for (int i = 0; i < arr.length(); i++) {
 						JSONObject elem = arr.getJSONObject(i);
-						coll.add(JSONToValueImpl(elem));
+						coll.add(JSONToValue(elem));
 					}
 				}
 				Type elemType = stringToType(obj.getString("t").substring("se|".length()));
