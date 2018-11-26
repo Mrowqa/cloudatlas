@@ -15,9 +15,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Set;
+import pl.edu.mimuw.cloudatlas.interpreter.AttributesExtractor;
 import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
 import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
 import pl.edu.mimuw.cloudatlas.interpreter.QueryResult;
+import pl.edu.mimuw.cloudatlas.interpreter.query.Absyn.Program;
 import pl.edu.mimuw.cloudatlas.interpreter.query.Yylex;
 import pl.edu.mimuw.cloudatlas.interpreter.query.parser;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
@@ -28,6 +31,7 @@ import pl.edu.mimuw.cloudatlas.model.TypeCollection;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
+import pl.edu.mimuw.cloudatlas.model.ValueNull;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
@@ -100,25 +104,35 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		if (queryNames.size() != queries.size()) {
 			throw new RemoteException("QueriesNames and queries should have equal size " + queryNames.size() + " vs " + queries.size());
 		}
-		for (int i = 0; i < queryNames.size(); i++) {
-			Attribute attribute = new Attribute(((ValueString)queryNames.get(i)).getValue());
-			ValueString query = (ValueString)queries.get(i);
-			if (!Attribute.isQuery(attribute)) {
-				throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
-			}
-			installQuery(zmi, attribute, query);
+		if (queryNames.size() != 1) {
+			throw new RemoteException("You can install only one query at once.");
 		}
+		Attribute attribute = new Attribute(((ValueString)queryNames.get(0)).getValue());
+		ValueString query = (ValueString)queries.get(0);
+		if (!Attribute.isQuery(attribute)) {
+			throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
+		}
+		try {
+			tryParse(query.getValue());
+		} catch (Exception e) {
+			throw new RemoteException("Error parsing query: " + e.getMessage());
+		}
+		installQuery(zmi, attribute, query);
 	}
 
 	@Override
 	public synchronized void uninstallQueries(ValueList queryNames) throws RemoteException {
 		checkElementType((TypeCollection)queryNames.getType(), PrimaryType.STRING);
-		for (Value queryName : queryNames) {
-			Attribute attribute = new Attribute(((ValueString)queryName).getValue());
-			if (!Attribute.isQuery(attribute)) {
-				throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
-			}
-			uninstallQuery(zmi, attribute);
+		if (queryNames.size() != 1) {
+			throw new RemoteException("You can uninstall only one query at once.");
+		}
+		Value queryName = queryNames.get(0);
+		Attribute attribute = new Attribute(((ValueString)queryName).getValue());
+		if (!Attribute.isQuery(attribute)) {
+			throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
+		}
+		if(!uninstallQuery(zmi, attribute)) {
+			throw new RemoteException("Query not found.");
 		}
 	}
 
@@ -168,9 +182,13 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 				}
 			}
 			for (ValueString query : queries) {
-				Yylex lex = new Yylex(new ByteArrayInputStream(query.getValue().getBytes()));
 				try {
-					List<QueryResult> result = interpreter.interpretProgram((new parser(lex)).pProgram());
+					Program program = tryParse(query.getValue());
+					Set<String> attributes = AttributesExtractor.extractAttributes(program);
+					for (String attribute : attributes) {
+						zmi.getAttributes().addOrChange(attribute, ValueNull.getInstance());
+					}
+					List<QueryResult> result = interpreter.interpretProgram(program);
 					for (QueryResult r : result) {
 						zmi.getAttributes().addOrChange(r.getName(), r.getValue());
 					}
@@ -181,6 +199,11 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		}
 	}
 	
+	private static Program tryParse(String query) throws Exception {
+		Yylex lex = new Yylex(new ByteArrayInputStream(query.getBytes()));
+		return (new parser(lex)).pProgram();
+	}
+	
 	private static void installQuery(ZMI zmi, Attribute attribute, ValueString query) {
 		if(!zmi.getSons().isEmpty()) {
 			for(ZMI son : zmi.getSons())
@@ -189,12 +212,15 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		}
 	}
 	
-	private static void uninstallQuery(ZMI zmi, Attribute attribute) {
+	private static boolean uninstallQuery(ZMI zmi, Attribute attribute) throws RemoteException {
+		boolean uninstalled = false;
 		if(!zmi.getSons().isEmpty()) {
 			for(ZMI son : zmi.getSons())
-				uninstallQuery(son, attribute);
+				uninstalled |= uninstallQuery(son, attribute);
+			uninstalled |= zmi.getAttributes().getOrNull(attribute) != null;
 			zmi.getAttributes().remove(attribute);
 		}
+		return uninstalled;
 	}
 
 	private ZMI findZone(ZMI zmi, String name) throws RemoteException {
