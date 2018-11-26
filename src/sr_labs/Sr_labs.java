@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Scanner;
-import javafx.util.Pair;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 import pl.edu.mimuw.cloudatlas.fetcher.Fetcher;
 import static pl.edu.mimuw.cloudatlas.interpreter.Main.executeQueries;
