@@ -110,7 +110,7 @@ public class WebClient {
 			String rmiResult;
 			int statusCode = 200;
 			try {
-				rmiResult = ZMIJSONSerializer.valueToJSON(rmi.getZones());
+				rmiResult = ZMIJSONSerializer.valueToJSONString(rmi.getZones());
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -134,7 +134,7 @@ public class WebClient {
 			String rmiResult;
 			try {
 				ValueString zoneName = new ValueString(params.get("zone-name"));
-				rmiResult = ZMIJSONSerializer.attributesMapToJSON(rmi.getZoneAttributes(zoneName));
+				rmiResult = ZMIJSONSerializer.attributesMapToJSONString(rmi.getZoneAttributes(zoneName));
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -157,7 +157,7 @@ public class WebClient {
 			String rmiResult = "OK";
 			try {
 				ValueString zoneName = new ValueString(params.get("zone-name"));
-				AttributesMap attrs = ZMIJSONSerializer.JSONToAttributesMap(params.get("zone-attrs"));
+				AttributesMap attrs = ZMIJSONSerializer.JSONStringToAttributesMap(params.get("zone-attrs"));
 				rmi.setZoneAttributes(zoneName, attrs);
 			}
 			catch (Exception ex) {
@@ -177,7 +177,7 @@ public class WebClient {
 			
 			String rmiResult;
 			try {
-				rmiResult = ZMIJSONSerializer.valueToJSON(rmi.getFallbackContacts());
+				rmiResult = ZMIJSONSerializer.valueToJSONString(rmi.getFallbackContacts());
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -199,7 +199,7 @@ public class WebClient {
 			
 			String rmiResult = "OK";
 			try {
-				ValueSet contacts = (ValueSet) ZMIJSONSerializer.JSONToValue(params.get("contacts"));
+				ValueSet contacts = (ValueSet) ZMIJSONSerializer.JSONStringToValue(params.get("contacts"));
 				rmi.setFallbackContacts(contacts);
 			}
 			catch (Exception ex) {

@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 import pl.edu.mimuw.cloudatlas.fetcher.Fetcher;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
@@ -29,9 +31,9 @@ public class HistoricalDataStorage extends Thread {
 	
 	private class DataEntry {
 		public Instant timestamp;
-		public String data;
+		public JSONArray data;
 		
-		public DataEntry(String data) {
+		public DataEntry(JSONArray data) {
 			this.timestamp = Instant.now();
 			this.data = data;
 		}
@@ -81,15 +83,15 @@ public class HistoricalDataStorage extends Thread {
 			startIndex = Integer.max(0, entries.size() - limit);
 		}
 		
-		result += "[";
+		JSONArray arr = new JSONArray();
 		for (int i = startIndex; i < entries.size(); i++) {
 			DataEntry entry = entries.get(i);
-			result += "{\"ts\":\"" + entry.timestamp.toString()
-					+ "\",\"zmi\":" + entry.data + "}"
-					+ (i + 1 < entries.size() ? "," : "");
+			JSONObject obj = new JSONObject();
+			obj.put("ts", entry.timestamp.toString());
+			obj.put("zmi", entry.data);
+			arr.put(obj);
 		}
-		result += "]";
 		
-		return result;
+		return arr.toString();
 	}
 }

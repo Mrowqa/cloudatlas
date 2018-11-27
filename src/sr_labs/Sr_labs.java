@@ -108,8 +108,8 @@ public class Sr_labs {
 		List<AttributesMap> attrsMapList = new ArrayList<>();
 		collectAttributesMaps(zmi, attrsMapList);
 		for (AttributesMap attrs : attrsMapList) {
-			String serialized = ZMIJSONSerializer.attributesMapToJSON(attrs);
-			String doubleSerialized = ZMIJSONSerializer.attributesMapToJSON(ZMIJSONSerializer.JSONToAttributesMap(serialized));
+			String serialized = ZMIJSONSerializer.attributesMapToJSONString(attrs);
+			String doubleSerialized = ZMIJSONSerializer.attributesMapToJSONString(ZMIJSONSerializer.JSONStringToAttributesMap(serialized));
 			assert (serialized.equals(doubleSerialized));
 		}
 		System.out.println("OK");
