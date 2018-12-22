@@ -30,7 +30,7 @@ public class Main {
             System.setSecurityManager(new SecurityManager());
         }
 		try {
-			CloudAtlasAgent agent = new CloudAtlasAgent(ZMIHierarchyBuilder.createDefaultHierarchy());
+			RMIModule agent = new RMIModule(ZMIHierarchyBuilder.createDefaultHierarchy());
 			agent.startQueryExecutor(queryDuration);
 			CloudAtlasInterface stub = (CloudAtlasInterface) UnicastRemoteObject.exportObject(agent, 0);
 			Registry registry = LocateRegistry.getRegistry();

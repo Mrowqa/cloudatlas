@@ -40,16 +40,16 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  *
  * @author pawel
  */
-public class CloudAtlasAgent implements CloudAtlasInterface {
+public class RMIModule implements CloudAtlasInterface {
 	private final ZMI zmi;
 	private QueryExecutor executor = null;
 	private ValueSet fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
 
 	private static class QueryExecutor extends Thread {
-		private final CloudAtlasAgent agent;
+		private final RMIModule agent;
 		private final Duration duration;
 		
-		public QueryExecutor(CloudAtlasAgent agent, Duration duration) {
+		public QueryExecutor(RMIModule agent, Duration duration) {
 			this.agent = agent;
 			this.duration = duration;
 		}
@@ -59,16 +59,16 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 			while(true) {
 				try {
 					agent.executeQueries();
-					Logger.getLogger(CloudAtlasAgent.class.getName()).log(Level.FINEST, "Queries exectued.");
+					Logger.getLogger(RMIModule.class.getName()).log(Level.FINEST, "Queries exectued.");
 					Thread.sleep((long) duration.toMillis());
 				} catch (Exception ex) {
-					Logger.getLogger(CloudAtlasAgent.class.getName()).log(Level.SEVERE, null, ex);
+					Logger.getLogger(RMIModule.class.getName()).log(Level.SEVERE, null, ex);
 				}
 			}
 		}
 	}
 	
-	public CloudAtlasAgent(ZMI zmi) {
+	public RMIModule(ZMI zmi) {
 		this.zmi = zmi;
 	}
 	
