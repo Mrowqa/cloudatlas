@@ -30,12 +30,16 @@ public class Main {
             System.setSecurityManager(new SecurityManager());
         }
 		try {
-			RMIModule agent = new RMIModule(ZMIHierarchyBuilder.createDefaultHierarchy());
-			agent.startQueryExecutor(queryDuration);
-			CloudAtlasInterface stub = (CloudAtlasInterface) UnicastRemoteObject.exportObject(agent, 0);
+			RMIModule rmiModule = new RMIModule();
+			ZMIModule zmiModule = new ZMIModule(ZMIHierarchyBuilder.createDefaultHierarchy());
+			TimerModule timerModule = new TimerModule();
+			
+			CloudAtlasInterface stub = (CloudAtlasInterface) UnicastRemoteObject.exportObject(rmiModule, 0);
 			Registry registry = LocateRegistry.getRegistry();
             registry.rebind("CloudAtlas", stub);
-			System.out.println("CloudAtlas Agent bound");
+
+			ModuleHandler handler = new ModuleHandler(zmiModule, rmiModule, timerModule);
+			handler.runAll();
 		} catch (Exception ex) {
 			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
 		}

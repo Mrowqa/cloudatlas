@@ -10,6 +10,15 @@ package pl.edu.mimuw.cloudatlas.agent;
  *
  * @author pawel
  */
-public class TimerModule {
+public class TimerModule extends Thread {
+	private ModuleHandler moduleHandler;
 	
+	public void setModuleHandler(ModuleHandler moduleHandler) {
+		this.moduleHandler = moduleHandler;
+	}
+	
+	@Override
+	public void run() {
+		throw new UnsupportedOperationException("Not yet supported");
+	}
 }
