@@ -63,21 +63,22 @@ public class ZMIModule extends Thread {
 
 	@Override
 	public void run() {
-		scheduleExecuteQueries();
+		scheduleQueriesExecution();
 		while (true) {
 			try {
 				ZMIMessage message = messages.take();
-				if (message.type == ZMIMessage.MessageType.EXECUTE_QUERIES) {
+				if (message.type == ZMIMessage.Type.EXECUTE_QUERIES) {
 					try {
 						executeQueries();
 					} catch(Exception ex) {
 						Logger.getLogger(ZMIModule.class.getName()).log(Level.FINEST, "Queries exectued.");
 					}
-					scheduleExecuteQueries();
+					scheduleQueriesExecution();
 					continue;
 				}
-
-				RMIMessage response = new RMIMessage(message.pid, RMIMessage.MessageType.SUCCESS);
+					
+				// Received message is from RMI module.
+				RMIMessage response = new RMIMessage(message.pid, RMIMessage.Type.SUCCESS);
 				try {
 					switch (message.type) {
 						case GET_ZMI:
@@ -98,17 +99,17 @@ public class ZMIModule extends Thread {
 						case UNINSTALL_QUERIES:
 							uninstallQueries((ValueList) message.value1);
 							break;
-						case GET_FALLBACK_CONTACT:
+						case GET_FALLBACK_CONTACTS:
 							response.value1 = getFallbackContacts();
 							break;
-						case SET_FALLBACK_CONTACT:
+						case SET_FALLBACK_CONTACTS:
 							setFallbackContacts((ValueSet) message.value1);
 							break;
 						default:
 							throw new UnsupportedOperationException("Message not supported: " + message.type);
 					}
 				} catch (Exception ex) {
-					response.type = RMIMessage.MessageType.ERROR;
+					response.type = RMIMessage.Type.ERROR;
 					response.errorMessage = ex.getMessage();
 				}
 				moduleHandler.enqueue(response);
@@ -122,19 +123,19 @@ public class ZMIModule extends Thread {
 		messages.put(message);
 	}
 
-	public synchronized ZMI getWholeZMI() {
+	private ZMI getWholeZMI() {
 		return zmi.clone();
 	}
 
-	public synchronized ValueList getZones() {
+	private ValueList getZones() {
 		return zmi.getZones();
 	}
 
-	public synchronized AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
+	private AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
 		return findZone(zmi, zone.getValue()).getAttributes();
 	}
 
-	public synchronized void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
+	private void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
 		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
 		checkElementType((TypeCollection) queries.getType(), PrimaryType.STRING);
 		if (queryNames.size() != queries.size()) {
@@ -156,7 +157,7 @@ public class ZMIModule extends Thread {
 		installQuery(zmi, attribute, query);
 	}
 
-	public synchronized void uninstallQueries(ValueList queryNames) throws RemoteException {
+	private void uninstallQueries(ValueList queryNames) throws RemoteException {
 		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
 		if (queryNames.size() != 1) {
 			throw new RemoteException("You can uninstall only one query at once.");
@@ -171,7 +172,7 @@ public class ZMIModule extends Thread {
 		}
 	}
 
-	public synchronized void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException {
+	private void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException {
 		ZMI zoneZmi = findZone(zmi, new PathName(zone.getValue()));
 		if (!zoneZmi.getSons().isEmpty()) {
 			throw new IllegalArgumentException("setZoneAttributes is only allowed for singleton zone.");
@@ -179,7 +180,7 @@ public class ZMIModule extends Thread {
 		zoneZmi.getAttributes().addOrChange(attributes);
 	}
 
-	public synchronized void setFallbackContacts(ValueSet contacts) throws RemoteException {
+	private void setFallbackContacts(ValueSet contacts) throws RemoteException {
 		if (contacts.isNull()) {
 			throw new IllegalArgumentException("Fallback contacts set can't be null");
 		}
@@ -187,11 +188,11 @@ public class ZMIModule extends Thread {
 		fallbackContacts = contacts;
 	}
 
-	public synchronized ValueSet getFallbackContacts() throws RemoteException {
+	private ValueSet getFallbackContacts() throws RemoteException {
 		return fallbackContacts;
 	}
 
-	private synchronized void executeQueries() throws Exception {
+	private void executeQueries() throws Exception {
 		executeQueries(zmi);
 	}
 
@@ -276,9 +277,9 @@ public class ZMIModule extends Thread {
 		throw new RemoteException("Zone not found.");
 	}
 	
-	private void scheduleExecuteQueries() {
+	private void scheduleQueriesExecution() {
 		long id = random.nextLong();
-		ZMIMessage callbackMessage = new ZMIMessage(ZMIMessage.MessageType.EXECUTE_QUERIES);
+		ZMIMessage callbackMessage = new ZMIMessage(ZMIMessage.Type.EXECUTE_QUERIES);
 		TimerMessage message = new TimerMessage(id, duration, callbackMessage);
 		try {
 			moduleHandler.enqueue(message);

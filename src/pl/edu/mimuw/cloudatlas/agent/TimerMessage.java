@@ -13,25 +13,24 @@ import java.time.Duration;
  * @author pawel
  */
 public class TimerMessage extends ModuleMessage {
-	public enum MessageType {
+	public enum Type {
 		ADD, CANCEL
 	}
 
-	public MessageType type;
+	public Type type;
 	public long id;
 	public Duration duration;
 	public ModuleMessage callbackMessage;
 
 	public TimerMessage(long id) {
 		this.module = ModuleMessage.Module.TIMER;
-		this.type = MessageType.CANCEL;
+		this.type = Type.CANCEL;
 		this.id = id;
 	}
 	
 	public TimerMessage(long id, Duration duration, ModuleMessage callbackMessage) {
-		this.module = ModuleMessage.Module.TIMER;
-		this.type = MessageType.ADD;
-		this.id = id;
+		this(id);
+		this.type = Type.ADD;
 		this.duration = duration;
 		this.callbackMessage = callbackMessage;
 	}

@@ -6,7 +6,6 @@
 
 package pl.edu.mimuw.cloudatlas.agent;
 
-import java.time.Duration;
 
 /**
  *
@@ -45,7 +44,8 @@ public class ModuleHandler {
 				timerModule.enqueue((TimerMessage) message);
 				break;
 			default:
-				throw new IllegalArgumentException("Messages associated with module " + message.module + " not supported");
+				throw new IllegalArgumentException("Messages associated with module " + 
+						message.module + " not supported");
 		}
 	}
 }

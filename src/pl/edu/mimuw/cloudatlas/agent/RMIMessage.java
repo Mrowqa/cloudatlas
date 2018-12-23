@@ -15,7 +15,7 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  * @author pawel
  */
 public class RMIMessage extends ModuleMessage {
-	public enum MessageType {
+	public enum Type {
 		SUCCESS, ERROR
 	}
 
@@ -24,14 +24,14 @@ public class RMIMessage extends ModuleMessage {
 	 * @param pid
 	 * @param type
 	 */
-	public RMIMessage(Long pid, MessageType type) {
+	public RMIMessage(long pid, Type type) {
 		this.module = ModuleMessage.Module.RMI;
 		this.pid = pid;
 		this.type = type;
 	}
 	
-	public Long pid;
-	public MessageType type;
+	public long pid;
+	public Type type;
 	public String errorMessage;
 	
 	public ZMI zmi;

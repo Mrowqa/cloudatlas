@@ -12,7 +12,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.google.common.collect.TreeMultimap;
-import static java.lang.Long.max;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -41,7 +40,7 @@ class SynchronizedMap {
 				} else {
 					Entry<LocalDateTime, Collection<Long>> entry = timeToId.asMap().firstEntry();
 					LocalDateTime current = LocalDateTime.now();
-					if (entry.getKey().isBefore(current)) {
+					if (!entry.getKey().isAfter(current)) {
 						LinkedList<ModuleMessage> messages = new LinkedList<>();
 						for (Long id : entry.getValue()) {
 							messages.add(idToCallbackMessage.get(id));
@@ -52,7 +51,7 @@ class SynchronizedMap {
 						return messages;
 					}
 					Duration sleepInterval = Duration.between(current, entry.getKey());
-					wait(max(sleepInterval.toMillis(), 10L));
+					wait(sleepInterval.toMillis());
 				}
 			} catch (InterruptedException ex) {
 			}
@@ -65,7 +64,7 @@ class SynchronizedMap {
 		idToCallbackMessage.put(id, message);
 		notifyAll();
 	}
-	
+
 	public synchronized void cancel(long id) {
 		LocalDateTime time = idToTime.getOrDefault(id, null);
 		if (time != null) {
@@ -105,9 +104,6 @@ class SleeperThread extends Thread {
 }
 
 public class TimerModule extends Thread {
-	public SleeperThread getSleeperThread() {
-		return sleeperThread;
-	}
 
 	private final LinkedBlockingQueue<TimerMessage> messages;
 	private final SynchronizedMap events;
@@ -118,6 +114,10 @@ public class TimerModule extends Thread {
 		this.messages = new LinkedBlockingQueue<>();
 		this.events = new SynchronizedMap();
 		this.sleeperThread = new SleeperThread(events);
+	}
+
+	public SleeperThread getSleeperThread() {
+		return sleeperThread;
 	}
 
 	public void setModuleHandler(ModuleHandler moduleHandler) {
@@ -135,7 +135,7 @@ public class TimerModule extends Thread {
 			try {
 				TimerMessage message = messages.take();
 				LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
-				if (message.type == TimerMessage.MessageType.ADD) {
+				if (message.type == TimerMessage.Type.ADD) {
 					events.addMessage(eventTime, message.id, message.callbackMessage);
 				} else {
 					events.cancel(message.id);

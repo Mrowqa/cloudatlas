@@ -14,25 +14,25 @@ import pl.edu.mimuw.cloudatlas.model.Value;
  * @author pawel
  */
 public class ZMIMessage extends ModuleMessage{
-	public enum MessageType {
+	public enum Type {
 		GET_ZMI, GET_ZONES, GET_ZONE_ATTRIBUTES, SET_ZONE_ATTRIBUTES, 
 		INSTALL_QUERIES, UNINSTALL_QUERIES, 
-		SET_FALLBACK_CONTACT, GET_FALLBACK_CONTACT,
+		SET_FALLBACK_CONTACTS, GET_FALLBACK_CONTACTS,
 		EXECUTE_QUERIES
 	}
 
-	public ZMIMessage(MessageType type) {
+	public ZMIMessage(Type type) {
 		this.module = Module.ZMI;
 		this.type = type;
 	}
 	
-	public ZMIMessage(long pid, MessageType type) {
+	public ZMIMessage(long pid, Type type) {
+		this(type);
 		this.module = Module.ZMI;
 		this.pid = pid;
-		this.type = type;
 	}
 	
-	public final MessageType type;
+	public final Type type;
 	public long pid;
 	public Value value1;
 	public Value value2;
