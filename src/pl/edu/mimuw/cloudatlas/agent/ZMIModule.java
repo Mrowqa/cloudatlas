@@ -14,6 +14,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import pl.edu.mimuw.cloudatlas.interpreter.AttributesExtractor;
@@ -43,49 +44,39 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
 public class ZMIModule extends Thread {
 	private final LinkedBlockingQueue<ZMIMessage> messages;
 	private final ZMI zmi;
+	private final Duration duration;
+	private final Random random;
+	private ValueSet fallbackContacts;
 	private ModuleHandler moduleHandler;
 
 	public void setModuleHandler(ModuleHandler moduleHandler) {
 		this.moduleHandler = moduleHandler;
 	}
-	// TODO move refactor query executor
-	private QueryExecutor executor = null;
-	private ValueSet fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
 
-	private static class QueryExecutor extends Thread {
-
-		private final ZMIModule agent;
-		private final Duration duration;
-
-		public QueryExecutor(ZMIModule agent, Duration duration) {
-			this.agent = agent;
-			this.duration = duration;
-		}
-
-		@Override
-		public void run() {
-			while (true) {
-				try {
-					agent.executeQueries();
-					Logger.getLogger(ZMIModule.class.getName()).log(Level.FINEST, "Queries exectued.");
-					Thread.sleep((long) duration.toMillis());
-				} catch (Exception ex) {
-					Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
-				}
-			}
-		}
-	}
-
-	public ZMIModule(ZMI zmi) {
+	public ZMIModule(ZMI zmi, Duration duration) {
 		this.messages = new LinkedBlockingQueue<>();
 		this.zmi = zmi;
+		this.duration = duration;
+		this.random = new Random();
+		this.fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
 	}
 
 	@Override
 	public void run() {
+		scheduleExecuteQueries();
 		while (true) {
 			try {
 				ZMIMessage message = messages.take();
+				if (message.type == ZMIMessage.MessageType.EXECUTE_QUERIES) {
+					try {
+						executeQueries();
+					} catch(Exception ex) {
+						Logger.getLogger(ZMIModule.class.getName()).log(Level.FINEST, "Queries exectued.");
+					}
+					scheduleExecuteQueries();
+					continue;
+				}
+
 				RMIMessage response = new RMIMessage(message.pid, RMIMessage.MessageType.SUCCESS);
 				try {
 					switch (message.type) {
@@ -129,16 +120,6 @@ public class ZMIModule extends Thread {
 
 	public void enqueue(ZMIMessage message) throws InterruptedException {
 		messages.put(message);
-	}
-
-	public void startQueryExecutor(Duration duration) {
-		if (executor != null) {
-			System.err.println("Query executor already started.");
-			return;
-		}
-		executor = new QueryExecutor(this, duration);
-		executor.start();
-		System.out.println("Query executor started");
 	}
 
 	public synchronized ZMI getWholeZMI() {
@@ -293,5 +274,16 @@ public class ZMIModule extends Thread {
 			}
 		}
 		throw new RemoteException("Zone not found.");
+	}
+	
+	private void scheduleExecuteQueries() {
+		long id = random.nextLong();
+		ZMIMessage callbackMessage = new ZMIMessage(ZMIMessage.MessageType.EXECUTE_QUERIES);
+		TimerMessage message = new TimerMessage(id, duration, callbackMessage);
+		try {
+			moduleHandler.enqueue(message);
+		} catch (InterruptedException ex) {
+			Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
+		}
 	}
 }

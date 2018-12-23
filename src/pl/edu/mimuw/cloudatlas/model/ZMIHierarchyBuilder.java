@@ -320,4 +320,16 @@ public class ZMIHierarchyBuilder {
 		
 		return root;
 	}
+
+	public static ZMI createLeafNodeHierarchy(PathName path) throws ParseException, UnknownHostException {
+		ZMI root = new ZMI();
+		ZMI father = root;
+		while (!path.getComponents().isEmpty()) {
+			String name = path.getComponents().get(0);
+			father = new ZMI(father, name);
+			father.getFather().addSon(father);
+			path = path.consumePrefix();
+		}
+		return root;
+	}
 }

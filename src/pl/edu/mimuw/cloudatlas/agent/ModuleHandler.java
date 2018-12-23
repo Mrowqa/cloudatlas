@@ -26,19 +26,26 @@ public class ModuleHandler {
 	public void runAll() {
 		zmiModule.setModuleHandler(this);
 		rmiModule.setModuleHandler(this);
-		// timerModule.setModuleHandler(this);
+		timerModule.setModuleHandler(this);
+		
+		timerModule.getSleeperThread().start();
+		timerModule.start();
 		zmiModule.run();
 	}
 	
-	public void enqueue(ZMIMessage message) throws InterruptedException {
-		zmiModule.enqueue(message);
-	}
-	
-	public void enqueue(RMIMessage message) throws InterruptedException {
-		rmiModule.enqueue(message);
-	}
-	
-	public void enqueue(TimerMessage message) throws InterruptedException {
-		//timerModule.enqueue(message);
+	public void enqueue(ModuleMessage message) throws InterruptedException {
+		switch(message.module) {
+			case ZMI:
+				zmiModule.enqueue((ZMIMessage) message);
+				break;
+			case RMI:
+				rmiModule.enqueue((RMIMessage) message);
+				break;
+			case TIMER:
+				timerModule.enqueue((TimerMessage) message);
+				break;
+			default:
+				throw new IllegalArgumentException("Messages associated with module " + message.module + " not supported");
+		}
 	}
 }

@@ -71,7 +71,6 @@ public class RMIModule implements CloudAtlasInterface {
 	public AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
 		long pid = nextPid++;
 		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.MessageType.GET_ZONE_ATTRIBUTES);
-		System.out.println("Get zone attributes");
 		request.value1 = zone;
 		RMIMessage response = getResponseOrError(request);
 		return response.attributes;

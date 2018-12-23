@@ -6,7 +6,6 @@
 
 package pl.edu.mimuw.cloudatlas.agent;
 
-import org.omg.PortableInterceptor.SUCCESSFUL;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
@@ -15,12 +14,18 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  *
  * @author pawel
  */
-public class RMIMessage {
+public class RMIMessage extends ModuleMessage {
 	public enum MessageType {
 		SUCCESS, ERROR
 	}
 
+	/**
+	 *
+	 * @param pid
+	 * @param type
+	 */
 	public RMIMessage(Long pid, MessageType type) {
+		this.module = ModuleMessage.Module.RMI;
 		this.pid = pid;
 		this.type = type;
 	}
