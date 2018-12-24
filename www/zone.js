@@ -112,9 +112,9 @@ $(document).ready(function() {
 						  }]
 						},
 						options: {
-                          animation: {
-                            duration: 0,
-                          },
+						  animation: {
+							duration: 0,
+						  },
 						  scales: {
 							yAxes: [{
 							  ticks: {
