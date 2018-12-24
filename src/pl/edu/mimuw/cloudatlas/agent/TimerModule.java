@@ -40,7 +40,8 @@ class EventScheduler {
 				} else {
 					Entry<LocalDateTime, Collection<Long>> entry = timeToId.asMap().firstEntry();
 					LocalDateTime current = LocalDateTime.now();
-					if (!entry.getKey().isAfter(current)) {
+					LocalDateTime eventsTime = entry.getKey();
+					if (eventsTime.isEqual(current) || eventsTime.isBefore(current)) {
 						LinkedList<ModuleMessage> messages = new LinkedList<>();
 						for (Long id : entry.getValue()) {
 							messages.add(idToCallbackMessage.get(id));
