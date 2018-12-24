@@ -3,7 +3,7 @@
 
 dir=${PWD}
 rundir=${dir}/build/classes
-path=${rundir}:${dir}/lib/cup.jar:${dir}/lib/JLex.jar
+path=${rundir}:${dir}/lib/cup.jar:${dir}/lib/JLex.jar:${dir}/lib/guava-23.0.jar
 
 ./gen-policy-file.sh ${rundir}
 

@@ -9,7 +9,6 @@ package pl.edu.mimuw.cloudatlas.agent;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
-import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;

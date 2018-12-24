@@ -3,7 +3,6 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package pl.edu.mimuw.cloudatlas.agent;
 
 import java.io.ByteArrayInputStream;
@@ -15,7 +14,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
 import pl.edu.mimuw.cloudatlas.interpreter.AttributesExtractor;
 import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
 import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
@@ -40,75 +41,111 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  *
  * @author pawel
  */
-public class CloudAtlasAgent implements CloudAtlasInterface {
+public class ZMIModule extends Thread {
+	private final LinkedBlockingQueue<ZMIMessage> messages;
 	private final ZMI zmi;
-	private QueryExecutor executor = null;
-	private ValueSet fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
+	private final Duration queryExecutionInterval;
+	private final Random random;
+	private ValueSet fallbackContacts;
+	private ModulesHandler modulesHandler;
 
-	private static class QueryExecutor extends Thread {
-		private final CloudAtlasAgent agent;
-		private final Duration duration;
-		
-		public QueryExecutor(CloudAtlasAgent agent, Duration duration) {
-			this.agent = agent;
-			this.duration = duration;
-		}
-		
-		@Override
-		public void run() {
-			while(true) {
-				try {
-					agent.executeQueries();
-					Logger.getLogger(CloudAtlasAgent.class.getName()).log(Level.FINEST, "Queries exectued.");
-					Thread.sleep((long) duration.toMillis());
-				} catch (Exception ex) {
-					Logger.getLogger(CloudAtlasAgent.class.getName()).log(Level.SEVERE, null, ex);
+	public void setModulesHandler(ModulesHandler modulesHandler) {
+		this.modulesHandler = modulesHandler;
+	}
+
+	public ZMIModule(ZMI zmi, Duration queryExecutionInterval) {
+		this.messages = new LinkedBlockingQueue<>();
+		this.zmi = zmi;
+		this.queryExecutionInterval = queryExecutionInterval;
+		this.random = new Random();
+		this.fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
+	}
+
+	@Override
+	public void run() {
+		scheduleQueriesExecution();
+		while (true) {
+			try {
+				ZMIMessage message = messages.take();
+				if (message.type == ZMIMessage.Type.EXECUTE_QUERIES) {
+					try {
+						executeQueries();
+					} catch(Exception ex) {
+						Logger.getLogger(ZMIModule.class.getName()).log(Level.FINEST, "Queries exectued.");
+					}
+					scheduleQueriesExecution();
+					continue;
 				}
+					
+				// Received message is from RMI module.
+				RMIMessage response = new RMIMessage(message.pid, RMIMessage.Type.SUCCESS);
+				try {
+					switch (message.type) {
+						case GET_ZMI:
+							response.zmi = getWholeZMI();
+							break;
+						case GET_ZONES:
+							response.value1 = getZones();
+							break;
+						case GET_ZONE_ATTRIBUTES:
+							response.attributes = getZoneAttributes((ValueString) message.value1);
+							break;
+						case SET_ZONE_ATTRIBUTES:
+							setZoneAttributes((ValueString) message.value1, message.attributes);
+							break;
+						case INSTALL_QUERIES:
+							installQueries((ValueList) message.value1, (ValueList) message.value2);
+							break;
+						case UNINSTALL_QUERIES:
+							uninstallQueries((ValueList) message.value1);
+							break;
+						case GET_FALLBACK_CONTACTS:
+							response.value1 = getFallbackContacts();
+							break;
+						case SET_FALLBACK_CONTACTS:
+							setFallbackContacts((ValueSet) message.value1);
+							break;
+						default:
+							throw new UnsupportedOperationException("Message not supported: " + message.type);
+					}
+				} catch (Exception ex) {
+					response.type = RMIMessage.Type.ERROR;
+					response.errorMessage = ex.getMessage();
+				}
+				modulesHandler.enqueue(response);
+			} catch (InterruptedException ex) {
+				Logger.getLogger(ZMIModule.class.getName()).log(Level.FINE, null, ex);
 			}
 		}
 	}
-	
-	public CloudAtlasAgent(ZMI zmi) {
-		this.zmi = zmi;
+
+	public void enqueue(ZMIMessage message) throws InterruptedException {
+		messages.put(message);
 	}
-	
-	public void startQueryExecutor(Duration duration) {
-		if (executor != null) {
-			System.err.println("Query executor already started.");
-			return;
-		}
-		executor = new QueryExecutor(this, duration);
-		executor.start();
-		System.out.println("Query executor started");
-	}
-	
-	@Override
-	public synchronized ZMI getWholeZMI() throws RemoteException {
+
+	private ZMI getWholeZMI() {
 		return zmi.clone();
 	}
-	
-	@Override
-	public synchronized ValueList getZones() throws RemoteException {
+
+	private ValueList getZones() {
 		return zmi.getZones();
 	}
 
-	@Override
-	public synchronized AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
+	private AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
 		return findZone(zmi, zone.getValue()).getAttributes();
 	}
-	
-	@Override
-	public synchronized void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
-		checkElementType((TypeCollection)queryNames.getType(), PrimaryType.STRING);
-		checkElementType((TypeCollection)queries.getType(), PrimaryType.STRING);
+
+	private void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
+		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
+		checkElementType((TypeCollection) queries.getType(), PrimaryType.STRING);
 		if (queryNames.size() != queries.size()) {
 			throw new RemoteException("QueriesNames and queries should have equal size " + queryNames.size() + " vs " + queries.size());
 		}
 		if (queryNames.size() != 1) {
 			throw new RemoteException("You can install only one query at once.");
 		}
-		Attribute attribute = new Attribute(((ValueString)queryNames.get(0)).getValue());
-		ValueString query = (ValueString)queries.get(0);
+		Attribute attribute = new Attribute(((ValueString) queryNames.get(0)).getValue());
+		ValueString query = (ValueString) queries.get(0);
 		if (!Attribute.isQuery(attribute)) {
 			throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
 		}
@@ -120,24 +157,22 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		installQuery(zmi, attribute, query);
 	}
 
-	@Override
-	public synchronized void uninstallQueries(ValueList queryNames) throws RemoteException {
-		checkElementType((TypeCollection)queryNames.getType(), PrimaryType.STRING);
+	private void uninstallQueries(ValueList queryNames) throws RemoteException {
+		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
 		if (queryNames.size() != 1) {
 			throw new RemoteException("You can uninstall only one query at once.");
 		}
 		Value queryName = queryNames.get(0);
-		Attribute attribute = new Attribute(((ValueString)queryName).getValue());
+		Attribute attribute = new Attribute(((ValueString) queryName).getValue());
 		if (!Attribute.isQuery(attribute)) {
 			throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
 		}
-		if(!uninstallQuery(zmi, attribute)) {
+		if (!uninstallQuery(zmi, attribute)) {
 			throw new RemoteException("Query not found.");
 		}
 	}
 
-	@Override
-	public synchronized void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException {
+	private void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException {
 		ZMI zoneZmi = findZone(zmi, new PathName(zone.getValue()));
 		if (!zoneZmi.getSons().isEmpty()) {
 			throw new IllegalArgumentException("setZoneAttributes is only allowed for singleton zone.");
@@ -145,40 +180,39 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 		zoneZmi.getAttributes().addOrChange(attributes);
 	}
 
-	@Override
-	public synchronized void setFallbackContacts(ValueSet contacts) throws RemoteException {
+	private void setFallbackContacts(ValueSet contacts) throws RemoteException {
 		if (contacts.isNull()) {
 			throw new IllegalArgumentException("Fallback contacts set can't be null");
 		}
-		checkElementType((TypeCollection)contacts.getType(), PrimaryType.CONTACT);
+		checkElementType((TypeCollection) contacts.getType(), PrimaryType.CONTACT);
 		fallbackContacts = contacts;
 	}
-	
-	@Override
-	public synchronized ValueSet getFallbackContacts() throws RemoteException {
+
+	private ValueSet getFallbackContacts() throws RemoteException {
 		return fallbackContacts;
 	}
 
-	private synchronized void executeQueries() throws Exception {
+	private void executeQueries() throws Exception {
 		executeQueries(zmi);
 	}
-	
+
 	private void checkElementType(TypeCollection collectionType, PrimaryType expectedType) {
 		PrimaryType actualType = collectionType.getElementType().getPrimaryType();
-		if (actualType != expectedType) 
+		if (actualType != expectedType) {
 			throw new IllegalArgumentException("Illegal type, got: " + actualType + " expected " + expectedType);
+		}
 	}
-	
-	
+
 	private static void executeQueries(ZMI zmi) throws Exception {
-		if(!zmi.getSons().isEmpty()) {
-			for(ZMI son : zmi.getSons())
+		if (!zmi.getSons().isEmpty()) {
+			for (ZMI son : zmi.getSons()) {
 				executeQueries(son);
+			}
 			Interpreter interpreter = new Interpreter(zmi);
 			ArrayList<ValueString> queries = new ArrayList<>();
 			for (Entry<Attribute, Value> entry : zmi.getAttributes()) {
 				if (Attribute.isQuery(entry.getKey())) {
-					queries.add((ValueString)entry.getValue());
+					queries.add((ValueString) entry.getValue());
 				}
 			}
 			for (ValueString query : queries) {
@@ -192,31 +226,33 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 					for (QueryResult r : result) {
 						zmi.getAttributes().addOrChange(r.getName(), r.getValue());
 					}
-				} catch(InterpreterException exception) {
+				} catch (InterpreterException exception) {
 					//System.err.println("Interpreter exception on " + getPathName(zmi) + ": " + exception.getMessage());
 				}
 			}
 		}
 	}
-	
+
 	private static Program tryParse(String query) throws Exception {
 		Yylex lex = new Yylex(new ByteArrayInputStream(query.getBytes()));
 		return (new parser(lex)).pProgram();
 	}
-	
+
 	private static void installQuery(ZMI zmi, Attribute attribute, ValueString query) {
-		if(!zmi.getSons().isEmpty()) {
-			for(ZMI son : zmi.getSons())
+		if (!zmi.getSons().isEmpty()) {
+			for (ZMI son : zmi.getSons()) {
 				installQuery(son, attribute, query);
+			}
 			zmi.getAttributes().addOrChange(attribute, query);
 		}
 	}
-	
+
 	private static boolean uninstallQuery(ZMI zmi, Attribute attribute) throws RemoteException {
 		boolean uninstalled = false;
-		if(!zmi.getSons().isEmpty()) {
-			for(ZMI son : zmi.getSons())
+		if (!zmi.getSons().isEmpty()) {
+			for (ZMI son : zmi.getSons()) {
 				uninstalled |= uninstallQuery(son, attribute);
+			}
 			uninstalled |= zmi.getAttributes().getOrNull(attribute) != null;
 			zmi.getAttributes().remove(attribute);
 		}
@@ -226,7 +262,7 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 	private ZMI findZone(ZMI zmi, String name) throws RemoteException {
 		return findZone(zmi, new PathName(name));
 	}
-	
+
 	private ZMI findZone(ZMI zmi, PathName pathName) throws RemoteException {
 		if (pathName.getComponents().isEmpty()) {
 			return zmi;
@@ -239,5 +275,16 @@ public class CloudAtlasAgent implements CloudAtlasInterface {
 			}
 		}
 		throw new RemoteException("Zone not found.");
+	}
+	
+	private void scheduleQueriesExecution() {
+		long id = random.nextLong();
+		ZMIMessage callbackMessage = new ZMIMessage(ZMIMessage.Type.EXECUTE_QUERIES);
+		TimerMessage message = TimerMessage.scheduleOneTimeCallback(id, queryExecutionInterval, callbackMessage);
+		try {
+			modulesHandler.enqueue(message);
+		} catch (InterruptedException ex) {
+			Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
+		}
 	}
 }
