@@ -133,7 +133,7 @@ public class TimerModule extends Thread {
 			try {
 				TimerMessage message = messages.take();
 				LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
-				if (message.type == TimerMessage.Type.ADD_ONE_TIME_CALLBACK) {
+				if (message.type == TimerMessage.Type.SCHEDULE_ONE_TIME_CALLBACK) {
 					events.scheduleEvent(eventTime, message.id, message.callbackMessage);
 				} else {
 					events.cancelEvent(message.id);

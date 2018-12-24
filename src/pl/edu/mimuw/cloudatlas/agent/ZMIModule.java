@@ -280,7 +280,7 @@ public class ZMIModule extends Thread {
 	private void scheduleQueriesExecution() {
 		long id = random.nextLong();
 		ZMIMessage callbackMessage = new ZMIMessage(ZMIMessage.Type.EXECUTE_QUERIES);
-		TimerMessage message = new TimerMessage(id, queryExecutionInterval, callbackMessage);
+		TimerMessage message = TimerMessage.scheduleOneTimeCallback(id, queryExecutionInterval, callbackMessage);
 		try {
 			modulesHandler.enqueue(message);
 		} catch (InterruptedException ex) {
