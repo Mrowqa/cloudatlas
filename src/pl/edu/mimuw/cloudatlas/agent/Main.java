@@ -38,12 +38,13 @@ public class Main {
 			RMIModule rmiModule = new RMIModule();
 			ZMIModule zmiModule = new ZMIModule(createZmi(), queryDuration);
 			TimerModule timerModule = new TimerModule();
+			CommunicationModule communicationModule = new CommunicationModule();
 			
 			CloudAtlasInterface stub = (CloudAtlasInterface) UnicastRemoteObject.exportObject(rmiModule, 0);
 			Registry registry = LocateRegistry.getRegistry();
             registry.rebind("CloudAtlas", stub);
 
-			ModulesHandler handler = new ModulesHandler(zmiModule, rmiModule, timerModule);
+			ModulesHandler handler = new ModulesHandler(zmiModule, rmiModule, timerModule, communicationModule);
 			handler.runAll();
 		} catch (Exception ex) {
 			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);

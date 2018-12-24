@@ -15,11 +15,13 @@ public class ModulesHandler {
 	private final ZMIModule zmiModule;
 	private final RMIModule rmiModule;
 	private final TimerModule timerModule;
+	private final CommunicationModule communicationModule;
 
-	public ModulesHandler(ZMIModule zmiModule, RMIModule rmiModule, TimerModule timerModule) {
+	public ModulesHandler(ZMIModule zmiModule, RMIModule rmiModule, TimerModule timerModule, CommunicationModule communicationModule) {
 		this.zmiModule = zmiModule;
 		this.rmiModule = rmiModule;
 		this.timerModule = timerModule;
+		this.communicationModule = communicationModule;
 	}
 	
 	public void runAll() {
@@ -28,7 +30,8 @@ public class ModulesHandler {
 		timerModule.setModulesHandler(this);
 		
 		timerModule.start();
-		zmiModule.run();
+		communicationModule.start();
+		zmiModule.start();
 	}
 	
 	public void enqueue(ModuleMessage message) throws InterruptedException {
@@ -41,6 +44,9 @@ public class ModulesHandler {
 				break;
 			case TIMER:
 				timerModule.enqueue((TimerMessage) message);
+				break;
+			case COMMUNICATION:
+				communicationModule.enqueue((CommunicationMessage) message);
 				break;
 			default:
 				throw new IllegalArgumentException("Messages associated with module " + 
