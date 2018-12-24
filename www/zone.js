@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    var updateIntervalInMs = 5000;  // just let it be 5s
     zoneName = document.URL.match(/zone=([a-zA-Z0-9_\/]+)/)[1]; // global variable
     $('#zone-name').val(zoneName);
 
@@ -44,7 +45,7 @@ $(document).ready(function() {
 		});
                 return result;
 	};
-	
+
     function getLabelsAndDataFor(data, attrName, attrType) {
         var labels = [];
 		var values = [];
@@ -63,71 +64,78 @@ $(document).ready(function() {
 		return {labels:labels, values:values};
     };
 
-    // produce charts:
-    $.get("/history", function (data) {
-		var canvasHTML = "";
-		var navbarHTML = "";
-        data = JSON.parse(data);
-		var attrsList = getAttributesList(data);
-		// create canvases in DOM
-		Reflect.ownKeys(attrsList).forEach(key => {
-			if (attrsList[key] == "i" || attrsList[key] == "do") {
-                var chartName = key + ': ' + attrsList[key];
-                var chartId = "chart-" + key;
-				canvasHTML += '<h3>' + chartName + '</h3>';
-				canvasHTML += '<canvas class="my-4 w-100" id="' + chartId + '" width="900" height="380"></canvas>';
+	function updateHistoryGraphs() {
+		// produce charts:
+		$.get("/history", function (data) {
+			var canvasHTML = "";
+			var navbarHTML = "";
+			data = JSON.parse(data);
+			var attrsList = getAttributesList(data);
+			// create canvases in DOM
+			Reflect.ownKeys(attrsList).forEach(key => {
+				if (attrsList[key] == "i" || attrsList[key] == "do") {
+					var chartName = key + ': ' + attrsList[key];
+					var chartId = "chart-" + key;
+					canvasHTML += '<h3>' + chartName + '</h3>';
+					canvasHTML += '<canvas class="my-4 w-100" id="' + chartId + '" width="900" height="380"></canvas>';
 
-                navbarHTML += `
-                    <li class="nav-item">
-                      <a class="nav-link" href="#` + chartId + `">
-                        <span data-feather="bar-chart-2"></span>
-                        ` + chartName + `
-                      </a>
-                    </li>`;
-			}
-			// rest of types is not supported
-		});
-		$("#graphs-content").html(canvasHTML);
-        $("#navbar-charts").html(navbarHTML);
-        feather.replace();
+					navbarHTML += `
+						<li class="nav-item">
+						  <a class="nav-link" href="#` + chartId + `">
+							<span data-feather="bar-chart-2"></span>
+							` + chartName + `
+						  </a>
+						</li>`;
+				}
+				// rest of types is not supported
+			});
+			$("#graphs-content").html(canvasHTML);
+			$("#navbar-charts").html(navbarHTML);
+			feather.replace();
 
-		// fill charts with actual data
-		Reflect.ownKeys(attrsList).forEach(key => {
-			if (attrsList[key] == "i" || attrsList[key] == "do") {
-				var graphData = getLabelsAndDataFor(data, key, attrsList[key]);
-				
-				var ctx = document.getElementById("chart-" + key);
-				var myChart = new Chart(ctx, {
-					type: 'line',
-					data: {
-					  labels: graphData.labels,
-					  datasets: [{
-						data: graphData.values,
-						lineTension: 0,
-						backgroundColor: 'transparent',
-						borderColor: '#007bff',
-						borderWidth: 4,
-						pointBackgroundColor: '#007bff'
-					  }]
-					},
-					options: {
-					  scales: {
-						yAxes: [{
-						  ticks: {
-							beginAtZero: false
+			// fill charts with actual data
+			Reflect.ownKeys(attrsList).forEach(key => {
+				if (attrsList[key] == "i" || attrsList[key] == "do") {
+					var graphData = getLabelsAndDataFor(data, key, attrsList[key]);
+
+					var ctx = document.getElementById("chart-" + key);
+					var myChart = new Chart(ctx, {
+						type: 'line',
+						data: {
+						  labels: graphData.labels,
+						  datasets: [{
+							data: graphData.values,
+							lineTension: 0,
+							backgroundColor: 'transparent',
+							borderColor: '#007bff',
+							borderWidth: 4,
+							pointBackgroundColor: '#007bff'
+						  }]
+						},
+						options: {
+						  animation: {
+							duration: 0,
+						  },
+						  scales: {
+							yAxes: [{
+							  ticks: {
+								beginAtZero: false
+							  }
+							}]
+						  },
+						  legend: {
+							display: false,
 						  }
-						}]
-					  },
-					  legend: {
-						display: false,
-					  }
-					}
-				});
-			}
-			// rest of types is not supported
+						}
+					});
+				}
+				// rest of types is not supported
+			});
+		})
+		.fail(function( jqXHR, textStatus, errorThrown ) {
+			$("#graphs-content").html("Failed to download zmi history: " + textStatus);
 		});
-    })
-    .fail(function( jqXHR, textStatus, errorThrown ) {
-        $("#graphs-content").html("Failed to download zmi history: " + textStatus);
-    });
+	}
+
+	setInterval(updateHistoryGraphs, updateIntervalInMs);
 });

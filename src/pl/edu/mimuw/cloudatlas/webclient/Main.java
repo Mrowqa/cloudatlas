@@ -20,7 +20,7 @@ import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
  */
 public class Main {
 
-	private static Duration sleepDuration = Duration.ofMinutes(5);
+	private static Duration sleepDuration = Duration.ofSeconds(5);
 	private static Duration dataHistoryLimit = null;
 
 	/**
