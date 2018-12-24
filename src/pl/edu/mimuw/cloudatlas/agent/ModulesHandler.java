@@ -11,23 +11,22 @@ package pl.edu.mimuw.cloudatlas.agent;
  *
  * @author pawel
  */
-public class ModuleHandler {
+public class ModulesHandler {
 	private final ZMIModule zmiModule;
 	private final RMIModule rmiModule;
 	private final TimerModule timerModule;
 
-	public ModuleHandler(ZMIModule zmiModule, RMIModule rmiModule, TimerModule timerModule) {
+	public ModulesHandler(ZMIModule zmiModule, RMIModule rmiModule, TimerModule timerModule) {
 		this.zmiModule = zmiModule;
 		this.rmiModule = rmiModule;
 		this.timerModule = timerModule;
 	}
 	
 	public void runAll() {
-		zmiModule.setModuleHandler(this);
-		rmiModule.setModuleHandler(this);
-		timerModule.setModuleHandler(this);
+		zmiModule.setModulesHandler(this);
+		rmiModule.setModulesHandler(this);
+		timerModule.setModulesHandler(this);
 		
-		timerModule.getSleeperThread().start();
 		timerModule.start();
 		zmiModule.run();
 	}

@@ -28,8 +28,22 @@ public class ZMIMessage extends ModuleMessage{
 	
 	public ZMIMessage(long pid, Type type) {
 		this(type);
-		this.module = Module.ZMI;
 		this.pid = pid;
+	}
+	
+	public ZMIMessage(long pid, Type type, Value value) {
+		this(pid, type);
+		this.value1 = value;
+	}
+	
+	public ZMIMessage(long pid, Type type, Value value1, Value value2) {
+		this(pid, type, value1);
+		this.value2 = value2;
+	}
+	
+	public ZMIMessage(long pid, Type type, Value value, AttributesMap attributes) {
+		this(pid, type, value);
+		this.attributes = attributes;
 	}
 	
 	public final Type type;

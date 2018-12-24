@@ -44,19 +44,19 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
 public class ZMIModule extends Thread {
 	private final LinkedBlockingQueue<ZMIMessage> messages;
 	private final ZMI zmi;
-	private final Duration duration;
+	private final Duration queryExecutionInterval;
 	private final Random random;
 	private ValueSet fallbackContacts;
-	private ModuleHandler moduleHandler;
+	private ModulesHandler modulesHandler;
 
-	public void setModuleHandler(ModuleHandler moduleHandler) {
-		this.moduleHandler = moduleHandler;
+	public void setModulesHandler(ModulesHandler modulesHandler) {
+		this.modulesHandler = modulesHandler;
 	}
 
-	public ZMIModule(ZMI zmi, Duration duration) {
+	public ZMIModule(ZMI zmi, Duration queryExecutionInterval) {
 		this.messages = new LinkedBlockingQueue<>();
 		this.zmi = zmi;
-		this.duration = duration;
+		this.queryExecutionInterval = queryExecutionInterval;
 		this.random = new Random();
 		this.fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
 	}
@@ -112,9 +112,9 @@ public class ZMIModule extends Thread {
 					response.type = RMIMessage.Type.ERROR;
 					response.errorMessage = ex.getMessage();
 				}
-				moduleHandler.enqueue(response);
+				modulesHandler.enqueue(response);
 			} catch (InterruptedException ex) {
-				Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
+				Logger.getLogger(ZMIModule.class.getName()).log(Level.FINE, null, ex);
 			}
 		}
 	}
@@ -280,9 +280,9 @@ public class ZMIModule extends Thread {
 	private void scheduleQueriesExecution() {
 		long id = random.nextLong();
 		ZMIMessage callbackMessage = new ZMIMessage(ZMIMessage.Type.EXECUTE_QUERIES);
-		TimerMessage message = new TimerMessage(id, duration, callbackMessage);
+		TimerMessage message = new TimerMessage(id, queryExecutionInterval, callbackMessage);
 		try {
-			moduleHandler.enqueue(message);
+			modulesHandler.enqueue(message);
 		} catch (InterruptedException ex) {
 			Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
 		}

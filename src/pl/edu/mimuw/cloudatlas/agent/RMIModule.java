@@ -8,6 +8,7 @@ package pl.edu.mimuw.cloudatlas.agent;
 
 import java.rmi.RemoteException;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
@@ -19,9 +20,9 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  * @author pawel
  */
 
-class MessageHandler {
+class MessagesCollection {
 	private final HashMap<Long, RMIMessage> messages = new HashMap<>();
-	public synchronized RMIMessage pop(long pid) throws InterruptedException {
+	public synchronized RMIMessage waitAndPop(long pid) throws InterruptedException {
 		while (true) {
 			RMIMessage message = messages.getOrDefault(pid, null);
 			if (message != null) {
@@ -39,17 +40,17 @@ class MessageHandler {
 }
 
 public class RMIModule implements CloudAtlasInterface {
-	private final MessageHandler messages;
-	private ModuleHandler moduleHandler;
-	volatile long nextPid;
+	private final MessagesCollection messages;
+	private ModulesHandler modulesHandler;
+	volatile AtomicLong nextPid;
 
 	public RMIModule() {
-		this.nextPid = 0;
-		this.messages = new MessageHandler();
+		this.nextPid = new AtomicLong(0L);
+		this.messages = new MessagesCollection();
 	}
 	
-	public void setModuleHandler(ModuleHandler moduleHandler) {
-		this.moduleHandler = moduleHandler;
+	public void setModulesHandler(ModulesHandler modulesHandler) {
+		this.modulesHandler = modulesHandler;
 	}
 	
 	public void enqueue(RMIMessage message) throws InterruptedException {
@@ -58,68 +59,61 @@ public class RMIModule implements CloudAtlasInterface {
 	
 	@Override
 	public ZMI getWholeZMI() throws RemoteException {
-		long pid = nextPid++;
+		long pid = nextPid.getAndIncrement();
 		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_ZMI);
-		RMIMessage response = getResponseOrError(request);
+		RMIMessage response = waitForResponseOrError(request);
 		return response.zmi;
 	}
 		
 	@Override
 	public ValueList getZones() throws RemoteException {
-		long pid = nextPid++;
+		long pid = nextPid.getAndIncrement();
 		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_ZONES);
-		RMIMessage response = getResponseOrError(request);
+		RMIMessage response = waitForResponseOrError(request);
 		return (ValueList)response.value1;
 	}
 
 	@Override
 	public AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
-		long pid = nextPid++;
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_ZONE_ATTRIBUTES);
-		request.value1 = zone;
-		RMIMessage response = getResponseOrError(request);
+		long pid = nextPid.getAndIncrement();
+		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_ZONE_ATTRIBUTES, zone);
+		RMIMessage response = waitForResponseOrError(request);
 		return response.attributes;
 	}
 	
 	@Override
 	public void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
-		long pid = nextPid++;
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.INSTALL_QUERIES);
-		request.value1 = queryNames;
-		request.value2 = queries;
-		getResponseOrError(request);
+		long pid = nextPid.getAndIncrement();
+		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.INSTALL_QUERIES, queryNames, queries);
+		waitForResponseOrError(request);
 	}
 
 	@Override
 	public void uninstallQueries(ValueList queryNames) throws RemoteException {
-		long pid = nextPid++;
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.UNINSTALL_QUERIES);
-		request.value1 = queryNames;
-		getResponseOrError(request);
+		long pid = nextPid.getAndIncrement();
+		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.UNINSTALL_QUERIES, queryNames);
+		waitForResponseOrError(request);
 	}
 
 	@Override
 	public void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException {
-		long pid = nextPid++;
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.SET_ZONE_ATTRIBUTES);
-		request.value1 = zone;
-		request.attributes = attributes;
-		getResponseOrError(request);
+		long pid = nextPid.getAndIncrement();
+		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.SET_ZONE_ATTRIBUTES, zone, attributes);
+		waitForResponseOrError(request);
 	}
 
 	@Override
 	public void setFallbackContacts(ValueSet contacts) throws RemoteException {
-		long pid = nextPid++;
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.SET_FALLBACK_CONTACTS);
-		request.value1 = contacts;
-		getResponseOrError(request);
+		long pid = nextPid.getAndIncrement();
+		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.SET_FALLBACK_CONTACTS, contacts);
+		waitForResponseOrError(request);
 	}
 	
 	@Override
 	public ValueSet getFallbackContacts() throws RemoteException {
-		long pid = nextPid++;
+		long pid = nextPid.getAndIncrement();
 		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_FALLBACK_CONTACTS);
-		RMIMessage response = getResponseOrError(request);
+		RMIMessage response = waitForResponseOrError(request);
 		return (ValueSet)response.value1;
 	}
 	
@@ -127,11 +121,11 @@ public class RMIModule implements CloudAtlasInterface {
 	 * Sends request, waits for response and returns it. 
 	 * If an exception occurs or the response contains error throws RemoteException. 
 	 */
-	private RMIMessage getResponseOrError(ZMIMessage request) throws RemoteException{
+	private RMIMessage waitForResponseOrError(ZMIMessage request) throws RemoteException{
 		RMIMessage response;
 		try {
-			moduleHandler.enqueue(request);
-			response = messages.pop(request.pid);
+			modulesHandler.enqueue(request);
+			response = messages.waitAndPop(request.pid);
 			if (response.type == RMIMessage.Type.ERROR) {
 				throw new RemoteException(response.errorMessage);
 			}

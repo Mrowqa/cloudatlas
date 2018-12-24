@@ -20,19 +20,19 @@ import java.util.LinkedList;
  *
  * @author pawel
  */
-class SynchronizedMap {
+class EventScheduler {
 
 	private final TreeMultimap<LocalDateTime, Long> timeToId;
 	private final HashMap<Long, LocalDateTime> idToTime;
 	private final HashMap<Long, ModuleMessage> idToCallbackMessage;
 
-	SynchronizedMap() {
+	EventScheduler() {
 		this.timeToId = TreeMultimap.create();
 		this.idToTime = new HashMap<>();
 		this.idToCallbackMessage = new HashMap<>();
 	}
 
-	public synchronized Collection<ModuleMessage> handleNext() {
+	public synchronized Collection<ModuleMessage> waitForNextBatch() {
 		while (true) {
 			try {
 				if (timeToId.isEmpty()) {
@@ -58,14 +58,14 @@ class SynchronizedMap {
 		}
 	}
 
-	public synchronized void addMessage(LocalDateTime time, long id, ModuleMessage message) {
+	public synchronized void scheduleEvent(LocalDateTime time, long id, ModuleMessage message) {
 		timeToId.put(time, id);
 		idToTime.put(id, time);
 		idToCallbackMessage.put(id, message);
 		notifyAll();
 	}
 
-	public synchronized void cancel(long id) {
+	public synchronized void cancelEvent(long id) {
 		LocalDateTime time = idToTime.getOrDefault(id, null);
 		if (time != null) {
 			idToTime.remove(id);
@@ -77,24 +77,24 @@ class SynchronizedMap {
 }
 
 class SleeperThread extends Thread {
-	private final SynchronizedMap events;
-	private ModuleHandler moduleHandler;
+	private final EventScheduler events;
+	private ModulesHandler modulesHandler;
 
-	SleeperThread(SynchronizedMap events) {
+	SleeperThread(EventScheduler events) {
 		this.events = events;
 	}
 
-	public void setModuleHandler(ModuleHandler moduleHandler) {
-		this.moduleHandler = moduleHandler;
+	public void setModulesHandler(ModulesHandler modulesHandler) {
+		this.modulesHandler = modulesHandler;
 	}
 
 	@Override
 	public void run() {
 		while (true) {
-			Collection<ModuleMessage> messages = events.handleNext();
+			Collection<ModuleMessage> messages = events.waitForNextBatch();
 			for (ModuleMessage message : messages) {
 				try {
-					moduleHandler.enqueue(message);
+					modulesHandler.enqueue(message);
 				} catch (InterruptedException ex) {
 					Logger.getLogger(SleeperThread.class.getName()).log(Level.SEVERE, null, ex);
 				}
@@ -106,23 +106,19 @@ class SleeperThread extends Thread {
 public class TimerModule extends Thread {
 
 	private final LinkedBlockingQueue<TimerMessage> messages;
-	private final SynchronizedMap events;
+	private final EventScheduler events;
 	private final SleeperThread sleeperThread;
-	private ModuleHandler moduleHandler;
+	private ModulesHandler modulesHandler;
 
 	public TimerModule() {
 		this.messages = new LinkedBlockingQueue<>();
-		this.events = new SynchronizedMap();
+		this.events = new EventScheduler();
 		this.sleeperThread = new SleeperThread(events);
 	}
 
-	public SleeperThread getSleeperThread() {
-		return sleeperThread;
-	}
-
-	public void setModuleHandler(ModuleHandler moduleHandler) {
-		this.moduleHandler = moduleHandler;
-		sleeperThread.setModuleHandler(moduleHandler);
+	public void setModulesHandler(ModulesHandler modulesHandler) {
+		this.modulesHandler = modulesHandler;
+		sleeperThread.setModulesHandler(modulesHandler);
 	}
 
 	public void enqueue(TimerMessage message) throws InterruptedException {
@@ -131,14 +127,15 @@ public class TimerModule extends Thread {
 
 	@Override
 	public void run() {
+		sleeperThread.start();
 		while (true) {
 			try {
 				TimerMessage message = messages.take();
 				LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
-				if (message.type == TimerMessage.Type.ADD) {
-					events.addMessage(eventTime, message.id, message.callbackMessage);
+				if (message.type == TimerMessage.Type.ADD_ONE_TIME_CALLBACK) {
+					events.scheduleEvent(eventTime, message.id, message.callbackMessage);
 				} else {
-					events.cancel(message.id);
+					events.cancelEvent(message.id);
 				}
 			} catch (InterruptedException ex) {
 				Logger.getLogger(TimerModule.class.getName()).log(Level.SEVERE, null, ex);

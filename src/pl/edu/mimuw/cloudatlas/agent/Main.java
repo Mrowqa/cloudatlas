@@ -43,7 +43,7 @@ public class Main {
 			Registry registry = LocateRegistry.getRegistry();
             registry.rebind("CloudAtlas", stub);
 
-			ModuleHandler handler = new ModuleHandler(zmiModule, rmiModule, timerModule);
+			ModulesHandler handler = new ModulesHandler(zmiModule, rmiModule, timerModule);
 			handler.runAll();
 		} catch (Exception ex) {
 			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
