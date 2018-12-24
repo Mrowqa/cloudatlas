@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    var updateIntervalInMs = 5000;  // just let it be 5s
     zoneName = document.URL.match(/zone=([a-zA-Z0-9_\/]+)/)[1]; // global variable
     $('#zone-name').val(zoneName);
 
@@ -136,5 +137,5 @@ $(document).ready(function() {
 		});
 	}
 
-	setInterval(updateHistoryGraphs, 5000); // let it be hardcoded 5s
+	setInterval(updateHistoryGraphs, updateIntervalInMs);
 });
