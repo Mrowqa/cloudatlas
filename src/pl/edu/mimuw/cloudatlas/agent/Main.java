@@ -14,6 +14,7 @@ import java.text.ParseException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.time.Duration;
+import java.util.logging.ConsoleHandler;
 import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 import pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder;
@@ -26,6 +27,7 @@ import pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder;
 public class Main {
 	private static Duration queryDuration = Duration.ofSeconds(5);
 	private static PathName targetZone;
+	private static boolean testCommunicationModule = false;
 	/**
 	 * @param args the command line arguments
 	 */
@@ -35,12 +37,29 @@ public class Main {
             System.setSecurityManager(new SecurityManager());
         }
 		try {
-			Module[] modules = {
-				new RMIModule(),
-				new ZMIModule(createZmi(), queryDuration),
-				new TimerModule(),
-				new CommunicationModule(),
-			};
+			Module[] modules;
+
+			if (testCommunicationModule) {
+				modules = new Module[] {
+					new TimerModule(),
+					new CommunicationModule(),
+					new TestCommunicationModule(),
+				};
+
+				Logger logger = Logger.getLogger(CommunicationModule.class.getName());
+				logger.setLevel(Level.FINER);
+				ConsoleHandler handler = new ConsoleHandler();
+				handler.setLevel(Level.FINER);
+				logger.addHandler(handler);
+			}
+			else {
+				modules = new Module[] {
+					new RMIModule(),
+					new ZMIModule(createZmi(), queryDuration),
+					new TimerModule(),
+					new CommunicationModule(),
+				};
+			}
 
 			ModulesHandler handler = new ModulesHandler(modules);
 			handler.runAll();
@@ -55,8 +74,14 @@ public class Main {
 			return;
 		}
 
+		if (args.length == 1 && args[0].equals("--test-communication-module")) {
+			testCommunicationModule = true;
+			return;
+		}
+
 		if (args.length != 4 || !args[0].equals("--sleep") || !args[2].equals("--zone")) {
 			System.err.println("Usage: <me> --sleep <num>(h|m|s) --zone /my/leaf/node");
+			System.err.println("   or: <me> --test-communication-module");
 			System.exit(1);
 		}
 		

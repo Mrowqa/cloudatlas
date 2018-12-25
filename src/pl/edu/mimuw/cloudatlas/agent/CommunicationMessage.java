@@ -5,6 +5,7 @@
  */
 package pl.edu.mimuw.cloudatlas.agent;
 
+import java.io.Serializable;
 import java.net.SocketAddress;
 import java.time.Duration;
 
@@ -22,6 +23,7 @@ public class CommunicationMessage extends ModuleMessage {
 	
 	public static CommunicationMessage sendMessage(ModuleMessage msg) {
 		CommunicationMessage ret = new CommunicationMessage();
+		ret.type = Type.SEND_MESSAGE;
 		ret.msg = msg;
 		
 		if (((NetworkSendable) msg) == null) {
@@ -34,6 +36,7 @@ public class CommunicationMessage extends ModuleMessage {
 	
 	static CommunicationMessage messageReceiveTimedOut(long msgId) {
 		CommunicationMessage ret = new CommunicationMessage();
+		ret.type = Type.MESSAGE_RECEIVE_TIMED_OUT;
 		ret.msgId = msgId;
 		
 		return ret;
@@ -45,7 +48,7 @@ interface NetworkSendable {
 	void setCommunicationInfo(CommunicationInfo info);
 }
 
-class CommunicationInfo {
+class CommunicationInfo implements Serializable {
 	private SocketAddress addr;
 	private CommunicationTimestamps ts;
 	
@@ -67,7 +70,7 @@ class CommunicationInfo {
 	}
 }
 
-class CommunicationTimestamps {
+class CommunicationTimestamps implements Serializable {
 	private Duration firstGap;
 	private Duration secondGap;
 	private Duration timeDiff;

@@ -136,9 +136,24 @@ public class CommunicationModule extends Thread implements Module {
 
 	private void sendMessage(ModuleMessage msg) {
 		try {
+			// Note: it may have problems when handling a lot of small messages
+			//       (haven't tested in real environment)
+			Duration pause = Duration.ofMillis(1);
+			int pauseAfterFragments = 10;
+
 			SocketAddress addr = ((NetworkSendable) msg).getCommunicationInfo().getAddress();
 			ModuleMessageFragment[] fragments = ModuleMessageFragmentationHandler.fragmentMessage(msg);  // can throw IllegalArgumentException
+			int sentFragsAfterLastPause = 0;
 			for (ModuleMessageFragment frag : fragments) {
+				if (sentFragsAfterLastPause >= pauseAfterFragments) {
+					Thread.sleep(pause.toMillis());  // required to avoid losing datagrams (OS has its limits)
+					                                 // note: we're slowing down only sending more datagrams and
+													 //       handling timeouts, so actually it's better to do Thread.sleep()
+													 //       instead of scheduling action with TimerModule (it wouldn't work, anyway)
+					sentFragsAfterLastPause = 0;
+				}
+				sentFragsAfterLastPause++;
+
 				frag.updateSentTimeToNow();
 				ByteBuffer data = frag.getEncodedFragment();
 				data.position(0);
@@ -187,11 +202,11 @@ class ModuleMessageFragmentationHandler {
 	private static final Random random = new Random();
 	private final HashMap<Long, PartiallyConstructedModuleMessage> fragments = new HashMap<>();
 	private ModulesHandler modulesHandler;
-	
+
 	public void setModulesHandler(ModulesHandler modulesHandler) {
 		this.modulesHandler = modulesHandler;
 	}
-	
+
 	public void addMessageFragment(SocketAddress sender, ModuleMessageFragment msgFrag, Instant recvTime) {
 		try {
 			long id = msgFrag.getId();
@@ -222,11 +237,14 @@ class ModuleMessageFragmentationHandler {
 			Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
-	
+
 	public void removeTimedOutMessage(long id) {
-		fragments.remove(id);
+		PartiallyConstructedModuleMessage part = fragments.remove(id);
+		Logger.getLogger(CommunicationModule.class.getName()).log(Level.FINE,
+				"Message ID {0} timed out (got {1} fragments out of {2})",
+				new Object[]{id, part.getNumberOfReceivedFragments(), part.getNumberOfAllFragments()});
 	}
-	
+
 	public static ModuleMessageFragment[] fragmentMessage(ModuleMessage msg) throws IOException {
 		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
 		ObjectOutputStream out2 = new ObjectOutputStream(out1);
@@ -292,7 +310,15 @@ class PartiallyConstructedModuleMessage {
 			remainingFragments--;
 		}
 	}
-	
+
+	public int getNumberOfReceivedFragments() {
+		return fragments.length - remainingFragments;
+	}
+
+	public int getNumberOfAllFragments() {
+		return fragments.length;
+	}
+
 	public boolean isComplete() {
 		return remainingFragments == 0;
 	}
@@ -337,7 +363,7 @@ class PartiallyConstructedModuleMessage {
 		long timesAvgFirst = timesSum / timesIncluded;
 
 		for (long d : times) {
-			if (d >= timesAvgFirst * FILTERING_FACTOR) {
+			if (d > timesAvgFirst * FILTERING_FACTOR) { // >= for only zeros filters everything out and causes later division by zero "/ timesIncluded"
 				timesSum -= d;
 				timesIncluded--;
 			}

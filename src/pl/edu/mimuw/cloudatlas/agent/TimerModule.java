@@ -60,6 +60,7 @@ class EventScheduler {
 	}
 
 	public synchronized void scheduleEvent(LocalDateTime time, long id, ModuleMessage message) {
+		cancelEventImpl(id);
 		timeToId.put(time, id);
 		idToTime.put(id, time);
 		idToCallbackMessage.put(id, message);
@@ -67,13 +68,17 @@ class EventScheduler {
 	}
 
 	public synchronized void cancelEvent(long id) {
+		cancelEventImpl(id);
+		notifyAll();
+	}
+
+	private void cancelEventImpl(long id) {
 		LocalDateTime time = idToTime.getOrDefault(id, null);
 		if (time != null) {
 			idToTime.remove(id);
 			idToCallbackMessage.remove(id);
 			timeToId.remove(time, id);
 		}
-		notifyAll();
 	}
 }
 
@@ -96,7 +101,7 @@ class SleeperThread extends Thread {
 			for (ModuleMessage message : messages) {
 				try {
 					modulesHandler.enqueue(message);
-				} catch (InterruptedException ex) {
+				} catch (Exception ex) {
 					Logger.getLogger(SleeperThread.class.getName()).log(Level.SEVERE, null, ex);
 				}
 			}
@@ -139,13 +144,13 @@ public class TimerModule extends Thread implements Module {
 		while (true) {
 			try {
 				TimerMessage message = messages.take();
-				LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
 				if (message.type == TimerMessage.Type.SCHEDULE_ONE_TIME_CALLBACK) {
+					LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
 					events.scheduleEvent(eventTime, message.id, message.callbackMessage);
 				} else {
 					events.cancelEvent(message.id);
 				}
-			} catch (InterruptedException ex) {
+			} catch (Exception ex) {
 				Logger.getLogger(TimerModule.class.getName()).log(Level.SEVERE, null, ex);
 			}
 		}

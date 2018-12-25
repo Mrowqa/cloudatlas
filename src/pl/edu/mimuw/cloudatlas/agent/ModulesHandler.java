@@ -26,6 +26,8 @@ public class ModulesHandler {
 	}
 	
 	public void enqueue(ModuleMessage message) throws InterruptedException {
+		assert message != null;
+
 		for (Module m : modules) {
 			if (m.canHandleMessage(message)) {
 				m.enqueue(message);
@@ -33,6 +35,6 @@ public class ModulesHandler {
 			}
 		}
 
-		throw new IllegalArgumentException("Messages not supported: " + message.toString());
+		throw new IllegalArgumentException("Message not supported: " + message);
 	}
 }
