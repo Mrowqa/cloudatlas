@@ -5,9 +5,8 @@
  */
 package pl.edu.mimuw.cloudatlas.agent;
 
-import java.net.InetAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
-import java.time.Instant;
 
 /**
  *
@@ -19,7 +18,7 @@ public class CommunicationMessage extends ModuleMessage {
 	};
 	public Type type;
 	public ModuleMessage msg;  // for send
-	Long msgId;  // for timedout
+	Long msgId;  // for timed out
 	
 	public static CommunicationMessage sendMessage(ModuleMessage msg) {
 		CommunicationMessage ret = new CommunicationMessage();
@@ -49,19 +48,19 @@ interface NetworkSendable {
 }
 
 class CommunicationInfo {
-	private InetAddress addr;
+	private SocketAddress addr;
 	private CommunicationTimestamps ts;
 	
-	public CommunicationInfo(InetAddress addr) {
+	public CommunicationInfo(SocketAddress addr) {
 		this(addr, CommunicationTimestamps.newEmpty());
 	}
 	
-	public CommunicationInfo(InetAddress addr, CommunicationTimestamps ts) {
+	public CommunicationInfo(SocketAddress addr, CommunicationTimestamps ts) {
 		this.addr = addr;
 		this.ts = ts;
 	}
 	
-	public InetAddress getAddress() {
+	public SocketAddress getAddress() {
 		return addr;
 	}
 	
@@ -79,7 +78,7 @@ class CommunicationTimestamps {
 		return new CommunicationTimestamps();
 	}
 	
-	public CommunicationTimestamps addNewGap(Duration secondGap) {
+	public CommunicationTimestamps newWithNextGap(Duration secondGap) {
 		CommunicationTimestamps ts = new CommunicationTimestamps();
 		ts.firstGap = this.secondGap;
 		ts.secondGap = secondGap;
