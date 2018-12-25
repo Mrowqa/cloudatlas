@@ -13,7 +13,7 @@ import pl.edu.mimuw.cloudatlas.model.Value;
  *
  * @author pawel
  */
-public class ZMIMessage extends ModuleMessage{
+public class ZMIMessage extends ModuleMessage {
 	public enum Type {
 		GET_ZMI, GET_ZONES, GET_ZONE_ATTRIBUTES, SET_ZONE_ATTRIBUTES, 
 		INSTALL_QUERIES, UNINSTALL_QUERIES, 
@@ -22,7 +22,6 @@ public class ZMIMessage extends ModuleMessage{
 	}
 
 	public ZMIMessage(Type type) {
-		this.module = Module.ZMI;
 		this.type = type;
 	}
 	

@@ -31,13 +31,11 @@ public class TimerMessage extends ModuleMessage {
 	}
 	
 	private TimerMessage(long id) {
-		this.module = ModuleMessage.Module.TIMER;
 		this.type = Type.CANCEL_CALLBACK;
 		this.id = id;
 	}
 	
 	private TimerMessage(long id, Duration duration, ModuleMessage callbackMessage) {
-		this.module = ModuleMessage.Module.TIMER;
 		this.type = Type.SCHEDULE_ONE_TIME_CALLBACK;
 		this.id = id;
 		this.duration = duration;

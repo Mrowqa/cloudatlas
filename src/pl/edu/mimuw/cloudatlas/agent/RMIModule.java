@@ -7,6 +7,9 @@
 package pl.edu.mimuw.cloudatlas.agent;
 
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
@@ -39,7 +42,7 @@ class MessagesCollection {
 	}
 }
 
-public class RMIModule implements CloudAtlasInterface {
+public class RMIModule implements CloudAtlasInterface, Module {
 	private final MessagesCollection messages;
 	private ModulesHandler modulesHandler;
 	volatile AtomicLong nextPid;
@@ -49,8 +52,31 @@ public class RMIModule implements CloudAtlasInterface {
 		this.messages = new MessagesCollection();
 	}
 	
+	@Override
 	public void setModulesHandler(ModulesHandler modulesHandler) {
 		this.modulesHandler = modulesHandler;
+	}
+
+	@Override
+	public boolean canHandleMessage(ModuleMessage message) {
+		return message instanceof RMIMessage;
+	}
+
+	@Override
+	public void enqueue(ModuleMessage message) throws InterruptedException {
+		messages.push((RMIMessage) message);
+	}
+
+	@Override
+	public void start() {
+		try {
+			CloudAtlasInterface stub = (CloudAtlasInterface) UnicastRemoteObject.exportObject(this, 0);
+			Registry registry = LocateRegistry.getRegistry();
+			registry.rebind("CloudAtlas", stub);
+		}
+		catch (RemoteException ex) { // will be caught in main
+			throw new RuntimeException(ex);
+		}
 	}
 	
 	public void enqueue(RMIMessage message) throws InterruptedException {

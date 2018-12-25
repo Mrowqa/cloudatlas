@@ -22,7 +22,6 @@ public class CommunicationMessage extends ModuleMessage {
 	
 	public static CommunicationMessage sendMessage(ModuleMessage msg) {
 		CommunicationMessage ret = new CommunicationMessage();
-		ret.module = Module.COMMUNICATION;
 		ret.msg = msg;
 		
 		if (((NetworkSendable) msg) == null) {
@@ -35,7 +34,6 @@ public class CommunicationMessage extends ModuleMessage {
 	
 	static CommunicationMessage messageReceiveTimedOut(long msgId) {
 		CommunicationMessage ret = new CommunicationMessage();
-		ret.module = Module.COMMUNICATION;
 		ret.msgId = msgId;
 		
 		return ret;

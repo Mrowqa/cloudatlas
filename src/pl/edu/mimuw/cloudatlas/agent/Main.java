@@ -35,16 +35,14 @@ public class Main {
             System.setSecurityManager(new SecurityManager());
         }
 		try {
-			RMIModule rmiModule = new RMIModule();
-			ZMIModule zmiModule = new ZMIModule(createZmi(), queryDuration);
-			TimerModule timerModule = new TimerModule();
-			CommunicationModule communicationModule = new CommunicationModule();
-			
-			CloudAtlasInterface stub = (CloudAtlasInterface) UnicastRemoteObject.exportObject(rmiModule, 0);
-			Registry registry = LocateRegistry.getRegistry();
-            registry.rebind("CloudAtlas", stub);
+			Module[] modules = {
+				new RMIModule(),
+				new ZMIModule(createZmi(), queryDuration),
+				new TimerModule(),
+				// new CommunicationModule(), // fixme something's broken
+			};
 
-			ModulesHandler handler = new ModulesHandler(zmiModule, rmiModule, timerModule, communicationModule);
+			ModulesHandler handler = new ModulesHandler(modules);
 			handler.runAll();
 		} catch (Exception ex) {
 			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);

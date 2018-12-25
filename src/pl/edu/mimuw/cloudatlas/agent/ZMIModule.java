@@ -41,7 +41,7 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  *
  * @author pawel
  */
-public class ZMIModule extends Thread {
+public class ZMIModule extends Thread implements Module {
 	private final LinkedBlockingQueue<ZMIMessage> messages;
 	private final ZMI zmi;
 	private final Duration queryExecutionInterval;
@@ -49,8 +49,19 @@ public class ZMIModule extends Thread {
 	private ValueSet fallbackContacts;
 	private ModulesHandler modulesHandler;
 
+	@Override
 	public void setModulesHandler(ModulesHandler modulesHandler) {
 		this.modulesHandler = modulesHandler;
+	}
+
+	@Override
+	public boolean canHandleMessage(ModuleMessage message) {
+		return message instanceof ZMIMessage;
+	}
+
+	@Override
+	public void enqueue(ModuleMessage message) throws InterruptedException {
+		messages.put((ZMIMessage) message);
 	}
 
 	public ZMIModule(ZMI zmi, Duration queryExecutionInterval) {
@@ -117,10 +128,6 @@ public class ZMIModule extends Thread {
 				Logger.getLogger(ZMIModule.class.getName()).log(Level.FINE, null, ex);
 			}
 		}
-	}
-
-	public void enqueue(ZMIMessage message) throws InterruptedException {
-		messages.put(message);
 	}
 
 	private ZMI getWholeZMI() {

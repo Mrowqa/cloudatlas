@@ -11,8 +11,4 @@ package pl.edu.mimuw.cloudatlas.agent;
  * @author pawel
  */
 public class ModuleMessage {
-	public enum Module {
-		TIMER, ZMI, RMI, COMMUNICATION,
-	}
-	public Module module;
 }

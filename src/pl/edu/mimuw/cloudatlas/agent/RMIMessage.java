@@ -25,7 +25,6 @@ public class RMIMessage extends ModuleMessage {
 	 * @param type
 	 */
 	public RMIMessage(long pid, Type type) {
-		this.module = ModuleMessage.Module.RMI;
 		this.pid = pid;
 		this.type = type;
 	}

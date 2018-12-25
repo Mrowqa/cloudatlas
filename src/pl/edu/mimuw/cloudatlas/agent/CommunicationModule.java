@@ -27,7 +27,7 @@ import java.util.logging.Logger;
  *
  * @author mrowqa
  */
-public class CommunicationModule extends Thread {
+public class CommunicationModule extends Thread implements Module {
 	public final static int SOCKET_PORT = 42777;
 	public final static Duration SOCKET_RECOVERY_INTERVAL = Duration.ofMinutes(5);
 	
@@ -41,13 +41,20 @@ public class CommunicationModule extends Thread {
 		this.messageFragmentationHandler = new ModuleMessageFragmentationHandler();
 	}
 
+	@Override
 	public void setModulesHandler(ModulesHandler modulesHandler) {
 		this.modulesHandler = modulesHandler;
 		messageFragmentationHandler.setModulesHandler(modulesHandler);
 	}
-	
-	public void enqueue(CommunicationMessage message) throws InterruptedException {
-		messages.put(message);
+
+	@Override
+	public boolean canHandleMessage(ModuleMessage message) {
+		return message instanceof CommunicationMessage;
+	}
+
+	@Override
+	public void enqueue(ModuleMessage message) throws InterruptedException {
+		messages.put((CommunicationMessage) message);
 	}
 	
 	@Override
