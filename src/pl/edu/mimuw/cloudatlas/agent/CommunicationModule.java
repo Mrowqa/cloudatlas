@@ -59,6 +59,8 @@ public class CommunicationModule extends Thread implements Module {
 	
 	@Override
 	public void run() {
+		recoverFromSocketFailure(); // init socket before starting other threads
+
 		CommunicationModule ThisModule = this;
 		new Thread() {
 			@Override
@@ -76,6 +78,7 @@ public class CommunicationModule extends Thread implements Module {
 		while (true) {
 			if (checkSocketFailure()) {
 				recoverFromSocketFailure();
+				notifyAll();
 			}
 			
 			try {
@@ -93,15 +96,15 @@ public class CommunicationModule extends Thread implements Module {
 	private void recoverFromSocketFailure() {
 		try {
 			networkChannel.close();
-		} catch (IOException ex) {}
-		
+		} catch (Exception ex) {}
+
 		try {
 			networkChannel = DatagramChannel.open();
 			networkChannel.configureBlocking(true);
 			networkChannel.bind(new InetSocketAddress(SOCKET_PORT));
 		}
 		catch (IOException ex) {
-			Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, ex.getMessage());
+			Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 	
@@ -118,7 +121,15 @@ public class CommunicationModule extends Thread implements Module {
 				}
 			}
 			catch (Exception ex) {
-				Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, ex.getMessage());
+				Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex);
+
+				if (checkSocketFailure()) {
+					try {
+						wait();
+					} catch (InterruptedException ex1) {
+						Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex1);
+					}
+				}
 			}
 		}
 	}
@@ -139,7 +150,7 @@ public class CommunicationModule extends Thread implements Module {
 			}
 		}
 		catch (Exception ex) {
-			Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, ex.getMessage());
+			Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 
@@ -157,7 +168,15 @@ public class CommunicationModule extends Thread implements Module {
 				messageFragmentationHandler.addMessageFragment(addr, msgFrag, recvTime);
 			}
 			catch (Exception ex) {
-				Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, ex.getMessage());
+				Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex);
+
+				if (checkSocketFailure()) {
+					try {
+						wait();
+					} catch (InterruptedException ex1) {
+						Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex1);
+					}
+				}
 			}
 		}
 	}
@@ -200,7 +219,7 @@ class ModuleMessageFragmentationHandler {
 			}
 		}
 		catch (Exception ex) {
-			Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, ex.getMessage());
+			Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 	

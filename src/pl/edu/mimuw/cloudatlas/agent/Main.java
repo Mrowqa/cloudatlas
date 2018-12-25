@@ -39,7 +39,7 @@ public class Main {
 				new RMIModule(),
 				new ZMIModule(createZmi(), queryDuration),
 				new TimerModule(),
-				// new CommunicationModule(), // fixme something's broken
+				new CommunicationModule(),
 			};
 
 			ModulesHandler handler = new ModulesHandler(modules);
