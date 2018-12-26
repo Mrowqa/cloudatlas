@@ -60,6 +60,7 @@ class EventScheduler {
 	}
 
 	public synchronized void scheduleEvent(LocalDateTime time, long id, ModuleMessage message) {
+		cancelEventImpl(id);
 		timeToId.put(time, id);
 		idToTime.put(id, time);
 		idToCallbackMessage.put(id, message);
@@ -67,13 +68,16 @@ class EventScheduler {
 	}
 
 	public synchronized void cancelEvent(long id) {
+		cancelEventImpl(id);
+	}
+
+	private void cancelEventImpl(long id) {
 		LocalDateTime time = idToTime.getOrDefault(id, null);
 		if (time != null) {
 			idToTime.remove(id);
 			idToCallbackMessage.remove(id);
 			timeToId.remove(time, id);
 		}
-		notifyAll();
 	}
 }
 
@@ -96,7 +100,7 @@ class SleeperThread extends Thread {
 			for (ModuleMessage message : messages) {
 				try {
 					modulesHandler.enqueue(message);
-				} catch (InterruptedException ex) {
+				} catch (Exception ex) {
 					Logger.getLogger(SleeperThread.class.getName()).log(Level.SEVERE, null, ex);
 				}
 			}
@@ -104,7 +108,7 @@ class SleeperThread extends Thread {
 	}
 }
 
-public class TimerModule extends Thread {
+public class TimerModule extends Thread implements Module {
 
 	private final LinkedBlockingQueue<TimerMessage> messages;
 	private final EventScheduler events;
@@ -117,13 +121,20 @@ public class TimerModule extends Thread {
 		this.sleeperThread = new SleeperThread(events);
 	}
 
+	@Override
 	public void setModulesHandler(ModulesHandler modulesHandler) {
 		this.modulesHandler = modulesHandler;
 		sleeperThread.setModulesHandler(modulesHandler);
 	}
 
-	public void enqueue(TimerMessage message) throws InterruptedException {
-		messages.put(message);
+	@Override
+	public boolean canHandleMessage(ModuleMessage message) {
+		return message instanceof TimerMessage;
+	}
+
+	@Override
+	public void enqueue(ModuleMessage message) throws InterruptedException {
+		messages.put((TimerMessage) message);
 	}
 
 	@Override
@@ -132,13 +143,13 @@ public class TimerModule extends Thread {
 		while (true) {
 			try {
 				TimerMessage message = messages.take();
-				LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
 				if (message.type == TimerMessage.Type.SCHEDULE_ONE_TIME_CALLBACK) {
+					LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
 					events.scheduleEvent(eventTime, message.id, message.callbackMessage);
 				} else {
 					events.cancelEvent(message.id);
 				}
-			} catch (InterruptedException ex) {
+			} catch (Exception ex) {
 				Logger.getLogger(TimerModule.class.getName()).log(Level.SEVERE, null, ex);
 			}
 		}

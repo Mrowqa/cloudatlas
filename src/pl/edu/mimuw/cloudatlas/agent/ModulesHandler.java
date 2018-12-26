@@ -12,39 +12,29 @@ package pl.edu.mimuw.cloudatlas.agent;
  * @author pawel
  */
 public class ModulesHandler {
-	private final ZMIModule zmiModule;
-	private final RMIModule rmiModule;
-	private final TimerModule timerModule;
+	private final Module[] modules;
 
-	public ModulesHandler(ZMIModule zmiModule, RMIModule rmiModule, TimerModule timerModule) {
-		this.zmiModule = zmiModule;
-		this.rmiModule = rmiModule;
-		this.timerModule = timerModule;
+	public ModulesHandler(Module[] modules) {
+		this.modules = modules;
 	}
 	
 	public void runAll() {
-		zmiModule.setModulesHandler(this);
-		rmiModule.setModulesHandler(this);
-		timerModule.setModulesHandler(this);
-		
-		timerModule.start();
-		zmiModule.run();
+		for (Module m : modules) {
+			m.setModulesHandler(this);
+			m.start();
+		}
 	}
 	
 	public void enqueue(ModuleMessage message) throws InterruptedException {
-		switch(message.module) {
-			case ZMI:
-				zmiModule.enqueue((ZMIMessage) message);
-				break;
-			case RMI:
-				rmiModule.enqueue((RMIMessage) message);
-				break;
-			case TIMER:
-				timerModule.enqueue((TimerMessage) message);
-				break;
-			default:
-				throw new IllegalArgumentException("Messages associated with module " + 
-						message.module + " not supported");
+		assert message != null;
+
+		for (Module m : modules) {
+			if (m.canHandleMessage(message)) {
+				m.enqueue(message);
+				return;
+			}
 		}
+
+		throw new IllegalArgumentException("Message not supported: " + message);
 	}
 }
