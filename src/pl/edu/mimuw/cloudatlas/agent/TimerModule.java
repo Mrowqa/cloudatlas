@@ -69,7 +69,6 @@ class EventScheduler {
 
 	public synchronized void cancelEvent(long id) {
 		cancelEventImpl(id);
-		notifyAll();
 	}
 
 	private void cancelEventImpl(long id) {

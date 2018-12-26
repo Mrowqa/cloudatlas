@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,7 +30,7 @@ import java.util.logging.Logger;
  */
 public class CommunicationModule extends Thread implements Module {
 	public final static int SOCKET_PORT = 42777;
-	public final static Duration SOCKET_RECOVERY_INTERVAL = Duration.ofMinutes(5);
+	public final static Duration SOCKET_RECOVERY_INTERVAL = Duration.ofSeconds(15);  // just for the demo
 	
 	private final LinkedBlockingQueue<CommunicationMessage> messages;
 	private ModulesHandler modulesHandler;
@@ -77,8 +78,8 @@ public class CommunicationModule extends Thread implements Module {
 		
 		while (true) {
 			if (checkSocketFailure()) {
+				Logger.getLogger(CommunicationModule.class.getName()).log(Level.INFO, "Detected socket failure. Recovering.");
 				recoverFromSocketFailure();
-				notifyAll();
 			}
 			
 			try {
@@ -123,13 +124,10 @@ public class CommunicationModule extends Thread implements Module {
 			catch (Exception ex) {
 				Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex);
 
-				if (checkSocketFailure()) {
-					try {
-						wait();
-					} catch (InterruptedException ex1) {
-						Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex1);
-					}
+				try {
+					Thread.sleep(SOCKET_RECOVERY_INTERVAL.toMillis());
 				}
+				catch (InterruptedException ex1) {}
 			}
 		}
 	}
@@ -185,13 +183,10 @@ public class CommunicationModule extends Thread implements Module {
 			catch (Exception ex) {
 				Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex);
 
-				if (checkSocketFailure()) {
-					try {
-						wait();
-					} catch (InterruptedException ex1) {
-						Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex1);
-					}
+				try {
+					Thread.sleep(SOCKET_RECOVERY_INTERVAL.toMillis());
 				}
+				catch (InterruptedException ex1) {}
 			}
 		}
 	}
@@ -200,7 +195,7 @@ public class CommunicationModule extends Thread implements Module {
 class ModuleMessageFragmentationHandler {
 	public static final Duration MESSAGE_FRAGMENTS_TIMEOUT = Duration.ofSeconds(30);
 	private static final Random random = new Random();
-	private final HashMap<Long, PartiallyConstructedModuleMessage> fragments = new HashMap<>();
+	private final ConcurrentHashMap<Long, PartiallyConstructedModuleMessage> fragments = new ConcurrentHashMap<>();
 	private ModulesHandler modulesHandler;
 
 	public void setModulesHandler(ModulesHandler modulesHandler) {
@@ -392,7 +387,7 @@ final class ModuleMessageFragment {
 	
 	public ModuleMessageFragment(byte[] binaryPacket) {
 		if (binaryPacket.length <= MY_HEADER_SIZE || binaryPacket.length > MY_HEADER_SIZE + USER_DATA_SIZE_LIMIT) {
-			throw new IllegalArgumentException("Received malformed packet"); // todo catch it!
+			throw new IllegalArgumentException("Received malformed packet");
 		}
 		data = ByteBuffer.allocate(binaryPacket.length);
 		data.put(binaryPacket);
