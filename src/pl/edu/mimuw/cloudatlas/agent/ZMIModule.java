@@ -151,17 +151,30 @@ public class ZMIModule extends Thread implements Module {
 		if (queryNames.size() != 1) {
 			throw new RemoteException("You can install only one query at once.");
 		}
-		Attribute attribute = new Attribute(((ValueString) queryNames.get(0)).getValue());
+		String name = ((ValueString) queryNames.get(0)).getValue();
 		ValueString query = (ValueString) queries.get(0);
+		String errorMsg = validateQuery(name, query.getValue());
+		if (errorMsg != null) {
+			throw new RemoteException(errorMsg);
+		}
+		
+		Attribute attribute = new Attribute(name);
+		installQuery(zmi, attribute, query);
+	}
+	
+	// returns error message, null==ok
+	public static String validateQuery(String name, String text) {
+		Attribute attribute = new Attribute(name);
 		if (!Attribute.isQuery(attribute)) {
-			throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
+			return "Invalid query name " + attribute + " should be proceed with &";
 		}
 		try {
-			tryParse(query.getValue());
+			tryParse(text);
 		} catch (Exception e) {
-			throw new RemoteException("Error parsing query: " + e.getMessage());
+			return "Error parsing query: " + e.getMessage();
 		}
-		installQuery(zmi, attribute, query);
+		
+		return null;
 	}
 
 	private void uninstallQueries(ValueList queryNames) throws RemoteException {
