@@ -34,10 +34,19 @@ First, run the rmi registry with::
 
 Then, run the agent::
 
-    $ ./server.sh --sleep 5m
+    $ ./server.sh --sleep 5m --zone /my/leaf/node --public-key path/to/public_key.der
 
-You can an extra argument to configure how often Agent executes installed
-queries. Default is 5 minutes.
+You can pass an extra argument to configure how often Agent executes installed
+queries. Default is 5 seconds. You can also specify zone name for the agent
+and RSA public key used for queries signatures verification.
+
+Agent comes with communication module test::
+
+    $ ./server.sh --test-communication-module
+
+Please note that printed size is size of some field in sent object before
+serialization and it is not size of UDP datagrams. You can monitor network
+with tools like bmon, though.
 
 ### Extra scripts
 
@@ -48,8 +57,16 @@ on localhost::
 
     $ ./fetcher.sh --sleep 5m --zone /uw/violet07
 
-sleep: how often fetch data and set them in agent, default 5 minutes
+sleep: how often fetch data and set them in agent, default 5 seconds
 zone: the specified zone that fetcher feeds data to
+
+#### Query Signer
+
+Signer is a centralized service for signing queries. You can run it with::
+
+    $ ./signer.sh --private-key path/to/private_key.der
+
+You can specify RSA private key used for queries signing.
 
 #### WebClient
 
@@ -58,7 +75,7 @@ store historical data, for the charts. It runs at localhost:8000.
 
     $ ./webclient.sh --sleep 5m
 
-sleep: how often fetch data for history charts, default 5 minutes
+sleep: how often fetch data for history charts, default 5 seconds
 
 #### CLI
 
