@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -103,6 +104,11 @@ public class ZMIModule extends Thread implements Module {
 					scheduleQueriesExecution();
 					continue;
 				}
+				if (message.type == ZMIMessage.Type.GET_ZMI_CONTACTS_QUERIES) {
+					GossipingMessage msg = GossipingMessage.localZMIInfo(message.pid, zmi, fallbackContacts, queries);
+					modulesHandler.enqueue(msg);
+					continue;
+				}
 					
 				// Received message is from RMI module.
 				RMIMessage response = new RMIMessage(message.pid, RMIMessage.Type.SUCCESS);
@@ -121,10 +127,10 @@ public class ZMIModule extends Thread implements Module {
 							setZoneAttributes((ValueString) message.value1, (ValueTime)message.value2, message.attributes);
 							break;
 						case INSTALL_QUERIES:
-							installQueries((ValueList) message.value1, (ValueList) message.value2, (ValueList) message.value3);
+							installQuery(((ValueString)message.value1).getValue(), message.valueAndFreshness, ((ValueString) message.value2).getValue());
 							break;
 						case UNINSTALL_QUERIES:
-							uninstallQueries((ValueList) message.value1, (ValueList) message.value2);
+							uninstallQuery(((ValueString)message.value1).getValue(), (ValueTime) message.value2, ((ValueString) message.value3).getValue());
 							break;
 						case GET_FALLBACK_CONTACTS:
 							response.value1 = getFallbackContacts();
@@ -158,31 +164,23 @@ public class ZMIModule extends Thread implements Module {
 		return findZone(zmi, zone.getValue()).getAttributes();
 	}
 
-	private void installQueries(ValueList queryNames, ValueList queries, ValueList signatures) throws RemoteException {
-		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
-		checkElementType((TypeCollection) queries.getType(), PrimaryType.STRING);
-		checkElementType((TypeCollection) signatures.getType(), PrimaryType.STRING);
-		if (queryNames.size() != queries.size() || queries.size() != signatures.size()) {
-			throw new RemoteException("QueryNames, queries and signatures must have equal size " + queryNames.size() + " vs " + queries.size() + " vs " + signatures.size());
-		}
-		if (queryNames.size() != 1) {
-			throw new RemoteException("You can install only one query at once.");
-		}
-		String name = ((ValueString) queryNames.get(0)).getValue();
-		ValueString query = (ValueString) queries.get(0);
-		String errorMsg = validateQuery(name, query.getValue());
+	private void installQuery(String name, ValueAndFreshness query, String signature) throws RemoteException {
+		String queryRaw = ((ValueString)query.getVal()).getValue();
+		String errorMsg = validateQuery(name, queryRaw);
 		if (errorMsg != null) {
 			throw new RemoteException(errorMsg);
 		}
 
-		String signature = ((ValueString) signatures.get(0)).getValue();
-		QueryOperation queryOp = QueryOperation.newQueryInstall(name, query.getValue());
+		QueryOperation queryOp = QueryOperation.newQueryInstall(name, queryRaw);
 		if (!signVerifier.verifyQueryOperationSignature(queryOp, signature)) {
 			throw new RemoteException("SecurityError: Invalid signatures for queries.");
 		}
-
 		Attribute attribute = new Attribute(name);
-		installQuery(zmi, attribute, query);
+		if (queries.getOrDefault(attribute, null) != null) {
+			throw new RemoteException("Query was already installed");
+		}
+
+		queries.put(attribute, query);
 	}
 	
 	// returns error message, null==ok
@@ -200,31 +198,18 @@ public class ZMIModule extends Thread implements Module {
 		return null;
 	}
 
-	private void uninstallQueries(ValueList queryNames, ValueList signatures) throws RemoteException {
-		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
-		checkElementType((TypeCollection) signatures.getType(), PrimaryType.STRING);
-		if (queryNames.size() != signatures.size()) {
-			throw new RemoteException("QueryNames and signatures must have equal size " + queryNames.size() + " vs " + signatures.size());
-		}
-		if (queryNames.size() != 1) {
-			throw new RemoteException("You can uninstall only one query at once.");
-		}
-		Value queryName = queryNames.get(0);
-		Attribute attribute = new Attribute(((ValueString) queryName).getValue());
-		if (!Attribute.isQuery(attribute)) {
-			throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
-		}
+	private void uninstallQuery(String name, ValueTime freshness, String signature) throws RemoteException {
+		Attribute attribute = new Attribute(name);
 
-		String signature = ((ValueString) signatures.get(0)).getValue();
-		String queryNameStr = ((ValueString) queryName).getValue();
-		QueryOperation queryOp = QueryOperation.newQueryUninstall(queryNameStr);
+		QueryOperation queryOp = QueryOperation.newQueryUninstall(name);
 		if (!signVerifier.verifyQueryOperationSignature(queryOp, signature)) {
 			throw new RemoteException("SecurityError: Invalid signatures for queries.");
 		}
 
-		if (!uninstallQuery(zmi, attribute)) {
-			throw new RemoteException("Query not found.");
+		if (!queryInstalled(attribute)) {
+			throw new RemoteException("Query not installed.");
 		}
+		removeQuery(attribute, freshness);
 	}
 
 	private void setZoneAttributes(ValueString zone, ValueTime freshness, AttributesMap attributes) throws RemoteException {
@@ -237,10 +222,6 @@ public class ZMIModule extends Thread implements Module {
 	}
 
 	private void setFallbackContacts(ValueAndFreshness contacts) throws RemoteException {
-		if (contacts.getVal().isNull()) {
-			throw new IllegalArgumentException("Fallback contacts set can't be null");
-		}
-		checkElementType((TypeCollection) contacts.getVal().getType(), PrimaryType.CONTACT);
 		fallbackContacts = contacts;
 	}
 
@@ -252,28 +233,19 @@ public class ZMIModule extends Thread implements Module {
 		executeQueries(zmi);
 	}
 
-	private void checkElementType(TypeCollection collectionType, PrimaryType expectedType) {
-		PrimaryType actualType = collectionType.getElementType().getPrimaryType();
-		if (actualType != expectedType) {
-			throw new IllegalArgumentException("Illegal type, got: " + actualType + " expected " + expectedType);
-		}
-	}
-
-	private static void executeQueries(ZMI zmi) throws Exception {
+	private void executeQueries(ZMI zmi) throws Exception {
 		if (!zmi.getSons().isEmpty()) {
 			for (ZMI son : zmi.getSons()) {
 				executeQueries(son);
 			}
 			Interpreter interpreter = new Interpreter(zmi);
-			ArrayList<ValueString> queries = new ArrayList<>();
-			for (Entry<Attribute, Value> entry : zmi.getAttributes()) {
-				if (Attribute.isQuery(entry.getKey())) {
-					queries.add((ValueString) entry.getValue());
+			for (ValueAndFreshness queryAndTs : queries.values()) {
+				String query = ((ValueString)queryAndTs.getVal()).getValue();
+				if (query.isEmpty()) {
+					continue;
 				}
-			}
-			for (ValueString query : queries) {
 				try {
-					Program program = tryParse(query.getValue());
+					Program program = tryParse(query);
 					Set<String> attributes = AttributesExtractor.extractAttributes(program);
 					for (String attribute : attributes) {
 						zmi.getAttributes().addOrChange(attribute, ValueNull.getInstance());
@@ -292,27 +264,6 @@ public class ZMIModule extends Thread implements Module {
 	private static Program tryParse(String query) throws Exception {
 		Yylex lex = new Yylex(new ByteArrayInputStream(query.getBytes()));
 		return (new parser(lex)).pProgram();
-	}
-
-	private static void installQuery(ZMI zmi, Attribute attribute, ValueString query) {
-		if (!zmi.getSons().isEmpty()) {
-			for (ZMI son : zmi.getSons()) {
-				installQuery(son, attribute, query);
-			}
-			zmi.getAttributes().addOrChange(attribute, query);
-		}
-	}
-
-	private static boolean uninstallQuery(ZMI zmi, Attribute attribute) throws RemoteException {
-		boolean uninstalled = false;
-		if (!zmi.getSons().isEmpty()) {
-			for (ZMI son : zmi.getSons()) {
-				uninstalled |= uninstallQuery(son, attribute);
-			}
-			uninstalled |= zmi.getAttributes().getOrNull(attribute) != null;
-			zmi.getAttributes().remove(attribute);
-		}
-		return uninstalled;
 	}
 
 	private ZMI findZone(ZMI zmi, String name) throws RemoteException {
@@ -342,5 +293,24 @@ public class ZMIModule extends Thread implements Module {
 		} catch (InterruptedException ex) {
 			Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
 		}
+	}
+
+	private boolean queryInstalled(Attribute attribute) {
+		ValueAndFreshness query = queries.getOrDefault(attribute, null);
+		if (query == null) {
+			return false;
+		}
+		String queryRaw = ((ValueString)query.getVal()).getValue();
+		return !queryRaw.isEmpty();
+	}
+
+	private void removeQuery(Attribute attribute, ValueTime freshness) {
+		ValueString empty = new ValueString("");
+		ValueAndFreshness removed = new ValueAndFreshness(empty, freshness);
+		queries.put(attribute, removed);
+	}
+
+	private void sendAllInfoToGosspingModule(long pid) throws InterruptedException {
+		
 	}
 }

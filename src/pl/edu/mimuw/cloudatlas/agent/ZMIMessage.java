@@ -21,20 +21,26 @@ public class ZMIMessage extends ModuleMessage {
 		GET_ZMI, GET_ZONES, GET_ZONE_ATTRIBUTES, SET_ZONE_ATTRIBUTES, 
 		INSTALL_QUERIES, UNINSTALL_QUERIES, 
 		SET_FALLBACK_CONTACTS, GET_FALLBACK_CONTACTS,
-		EXECUTE_QUERIES
+		EXECUTE_QUERIES, GET_ZMI_CONTACTS_QUERIES
 	}
 
-	public static ZMIMessage installQuery(long pid, Value name, Value query) {
+	public static ZMIMessage getLocalZMIInfo(long pid) {
+		return new ZMIMessage(pid, Type.GET_ZMI_CONTACTS_QUERIES);
+	}
+	
+	public static ZMIMessage installQuery(long pid, Value name, Value query, Value signature) {
 		ZMIMessage ret = new ZMIMessage(pid, Type.INSTALL_QUERIES);
 		ret.value1 = name;
+		ret.value2 = signature;
 		ret.valueAndFreshness = ValueAndFreshness.freshValue(query);
 		return ret;
 	}
 	
-	public static ZMIMessage uninstallQuery(long pid, Value name) {
+	public static ZMIMessage uninstallQuery(long pid, Value name, Value signature) {
 		ZMIMessage ret = new ZMIMessage(pid, Type.UNINSTALL_QUERIES);
 		ret.value1 = name;
 		ret.value2 = ValueTime.now();
+		ret.value3 = signature;
 		return ret;
 	}
 	
@@ -48,8 +54,7 @@ public class ZMIMessage extends ModuleMessage {
 	
 	public static ZMIMessage setFallbackContacts(long pid, Value contacts) {
 		ZMIMessage ret = new ZMIMessage(pid, Type.SET_FALLBACK_CONTACTS);
-		ret.value1 = contacts;
-		ret.value2 = ValueTime.now();
+		ret.valueAndFreshness = ValueAndFreshness.freshValue(contacts);
 		return ret;
 	}
 	

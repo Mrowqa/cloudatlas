@@ -25,7 +25,7 @@ public class ValueAndFreshness implements Serializable {
 		return freshness;
 	}
 
-	private ValueAndFreshness(Value val, ValueTime freshness) {
+	public ValueAndFreshness(Value val, ValueTime freshness) {
 		this.val = val;
 		this.freshness = freshness;
 	}

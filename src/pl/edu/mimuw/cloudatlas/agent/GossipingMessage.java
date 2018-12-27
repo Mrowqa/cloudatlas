@@ -39,47 +39,46 @@ public class GossipingMessage extends ModuleMessage implements NetworkSendable {
 		this.pid = msgId;
 	}
 	
-	public GossipingMessage callbackStartGossiping(long msgId) {
-		GossipingMessage msg = new GossipingMessage(Type.CALLBACK_START_GOSSIPING, msgId);
-		return msg;
+	public static GossipingMessage callbackStartGossiping(long pid) {
+		return new GossipingMessage(Type.CALLBACK_START_GOSSIPING, pid);
 	}
 	
-	public GossipingMessage localZMIInfo(long msgId, ZMI zmi, 
+	public static GossipingMessage localZMIInfo(long msgId, ZMI zmi, 
 			ValueAndFreshness fallbackContacts, 
 			Map<Attribute, ValueAndFreshness> queries) {
 		GossipingMessage msg = new GossipingMessage(Type.LOCAL_ZMI_INFO, msgId);
-		this.zmi = new ZMI[1];
-		this.zmi[0] = zmi;
-		this.fallbackContacts = fallbackContacts;
-		this.queries = queries;
+		msg.zmi = new ZMI[1];
+		msg.zmi[0] = zmi;
+		msg.fallbackContacts = fallbackContacts;
+		msg.queries = queries;
 		return msg;
 	}
 	
-	public GossipingMessage sendRemoteZMIInfo(long msgId, ZMI[] zmi, 
+	public static GossipingMessage sendRemoteZMIInfo(long msgId, ZMI[] zmi, 
 			CommunicationInfo info,
 			ValueAndFreshness fallbackContacts, 
 			Map<Attribute, ValueAndFreshness> queries,
 			PathName senderPathName) {
 		GossipingMessage msg = new GossipingMessage(Type.REMOTE_ZMI_INFO, msgId);
-		this.info = info;
-		this.zmi = zmi;
-		this.fallbackContacts = fallbackContacts;
-		this.queries = queries;
-		this.senderPathName = senderPathName;
+		msg.info = info;
+		msg.zmi = zmi;
+		msg.fallbackContacts = fallbackContacts;
+		msg.queries = queries;
+		msg.senderPathName = senderPathName;
 		return msg;
 	}
 	
-	public GossipingMessage callbackResendZMIInfo(long msgId) {
+	public static GossipingMessage callbackResendZMIInfo(long msgId) {
 		return new GossipingMessage(Type.CALLBACK_RESEND_ZMI_INFO, msgId);
 	}
 	
-	public GossipingMessage ack(long msgId, CommunicationInfo info) {
+	public static GossipingMessage ack(long msgId, CommunicationInfo info) {
 		GossipingMessage msg = new GossipingMessage(Type.ACK, msgId);
-		this.info = info;
+		msg.info = info;
 		return msg;
 	}
 	
-	public GossipingMessage callbackEndGossiping(long msgId) {
+	public static GossipingMessage callbackEndGossiping(long msgId) {
 		return new GossipingMessage(Type.CALLBACK_END_GOSSIPING, msgId);
 	}
 	
