@@ -13,5 +13,5 @@ import java.rmi.RemoteException;
  * @author mrowqa
  */
 public interface SignerInterface extends Remote {
-	public byte[] signQueryOperation(QueryOperation query) throws RemoteException;
+	public String signQueryOperation(QueryOperation query) throws RemoteException;
 }

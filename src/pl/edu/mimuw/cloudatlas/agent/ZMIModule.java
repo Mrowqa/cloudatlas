@@ -36,6 +36,8 @@ import pl.edu.mimuw.cloudatlas.model.ValueNull;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
+import pl.edu.mimuw.cloudatlas.signer.QueryOperation;
+import pl.edu.mimuw.cloudatlas.signer.Signer;
 
 /**
  *
@@ -46,6 +48,7 @@ public class ZMIModule extends Thread implements Module {
 	private final ZMI zmi;
 	private final Duration queryExecutionInterval;
 	private final Random random;
+	private final Signer signVerifier;
 	private ValueSet fallbackContacts;
 	private ModulesHandler modulesHandler;
 
@@ -64,12 +67,18 @@ public class ZMIModule extends Thread implements Module {
 		messages.put((ZMIMessage) message);
 	}
 
-	public ZMIModule(ZMI zmi, Duration queryExecutionInterval) {
+	public ZMIModule(ZMI zmi, Duration queryExecutionInterval, String pubKeyFilename) {
 		this.messages = new LinkedBlockingQueue<>();
 		this.zmi = zmi;
 		this.queryExecutionInterval = queryExecutionInterval;
 		this.random = new Random();
 		this.fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
+		try {
+			this.signVerifier = new Signer(Signer.Mode.SIGN_VERIFIER, pubKeyFilename);
+		}
+		catch (Exception ex) {
+			throw new RuntimeException(ex);
+		}
 	}
 
 	@Override
@@ -105,10 +114,10 @@ public class ZMIModule extends Thread implements Module {
 							setZoneAttributes((ValueString) message.value1, message.attributes);
 							break;
 						case INSTALL_QUERIES:
-							installQueries((ValueList) message.value1, (ValueList) message.value2);
+							installQueries((ValueList) message.value1, (ValueList) message.value2, (ValueList) message.value3);
 							break;
 						case UNINSTALL_QUERIES:
-							uninstallQueries((ValueList) message.value1);
+							uninstallQueries((ValueList) message.value1, (ValueList) message.value2);
 							break;
 						case GET_FALLBACK_CONTACTS:
 							response.value1 = getFallbackContacts();
@@ -142,11 +151,12 @@ public class ZMIModule extends Thread implements Module {
 		return findZone(zmi, zone.getValue()).getAttributes();
 	}
 
-	private void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
+	private void installQueries(ValueList queryNames, ValueList queries, ValueList signatures) throws RemoteException {
 		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
 		checkElementType((TypeCollection) queries.getType(), PrimaryType.STRING);
-		if (queryNames.size() != queries.size()) {
-			throw new RemoteException("QueriesNames and queries should have equal size " + queryNames.size() + " vs " + queries.size());
+		checkElementType((TypeCollection) signatures.getType(), PrimaryType.STRING);
+		if (queryNames.size() != queries.size() || queries.size() != signatures.size()) {
+			throw new RemoteException("QueryNames, queries and signatures must have equal size " + queryNames.size() + " vs " + queries.size() + " vs " + signatures.size());
 		}
 		if (queryNames.size() != 1) {
 			throw new RemoteException("You can install only one query at once.");
@@ -157,7 +167,13 @@ public class ZMIModule extends Thread implements Module {
 		if (errorMsg != null) {
 			throw new RemoteException(errorMsg);
 		}
-		
+
+		String signature = ((ValueString) signatures.get(0)).getValue();
+		QueryOperation queryOp = QueryOperation.newQueryInstall(name, query.getValue());
+		if (!signVerifier.verifyQueryOperationSignature(queryOp, signature)) {
+			throw new RemoteException("SecurityError: Invalid signatures for queries.");
+		}
+
 		Attribute attribute = new Attribute(name);
 		installQuery(zmi, attribute, query);
 	}
@@ -177,8 +193,12 @@ public class ZMIModule extends Thread implements Module {
 		return null;
 	}
 
-	private void uninstallQueries(ValueList queryNames) throws RemoteException {
+	private void uninstallQueries(ValueList queryNames, ValueList signatures) throws RemoteException { // todo
 		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
+		checkElementType((TypeCollection) signatures.getType(), PrimaryType.STRING);
+		if (queryNames.size() != signatures.size()) {
+			throw new RemoteException("QueryNames and signatures must have equal size " + queryNames.size() + " vs " + signatures.size());
+		}
 		if (queryNames.size() != 1) {
 			throw new RemoteException("You can uninstall only one query at once.");
 		}
@@ -187,6 +207,14 @@ public class ZMIModule extends Thread implements Module {
 		if (!Attribute.isQuery(attribute)) {
 			throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
 		}
+
+		String signature = ((ValueString) signatures.get(0)).getValue();
+		String queryNameStr = ((ValueString) queryName).getValue();
+		QueryOperation queryOp = QueryOperation.newQueryUninstall(queryNameStr);
+		if (!signVerifier.verifyQueryOperationSignature(queryOp, signature)) {
+			throw new RemoteException("SecurityError: Invalid signatures for queries.");
+		}
+
 		if (!uninstallQuery(zmi, attribute)) {
 			throw new RemoteException("Query not found.");
 		}

@@ -108,16 +108,16 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	}
 	
 	@Override
-	public void installQueries(ValueList queryNames, ValueList queries) throws RemoteException {
+	public void installQueries(ValueList queryNames, ValueList queries, ValueList signatures) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.INSTALL_QUERIES, queryNames, queries);
+		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.INSTALL_QUERIES, queryNames, queries, signatures);
 		waitForResponseOrError(request);
 	}
 
 	@Override
-	public void uninstallQueries(ValueList queryNames) throws RemoteException {
+	public void uninstallQueries(ValueList queryNames, ValueList signatures) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.UNINSTALL_QUERIES, queryNames);
+		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.UNINSTALL_QUERIES, queryNames, signatures);
 		waitForResponseOrError(request);
 	}
 

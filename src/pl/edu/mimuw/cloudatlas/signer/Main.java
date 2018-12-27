@@ -26,7 +26,7 @@ public class Main {
             System.setSecurityManager(new SecurityManager());
         }
 		try {
-			Signer signer = new Signer(Signer.Mode.Signer, privKeyFilename);
+			Signer signer = new Signer(Signer.Mode.SIGNER, privKeyFilename);
 			
 			SignerInterface stub = (SignerInterface) UnicastRemoteObject.exportObject(signer, 0);
 			Registry registry = LocateRegistry.getRegistry();

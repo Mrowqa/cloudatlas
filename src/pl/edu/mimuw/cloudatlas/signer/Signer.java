@@ -5,18 +5,25 @@
  */
 package pl.edu.mimuw.cloudatlas.signer;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.security.KeyFactory;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.HashSet;
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
 import pl.edu.mimuw.cloudatlas.agent.ZMIModule;
 
 /**
@@ -25,7 +32,7 @@ import pl.edu.mimuw.cloudatlas.agent.ZMIModule;
  */
 public class Signer implements SignerInterface {
 	public enum Mode {
-		Signer, SignVerifier,
+		SIGNER, SIGN_VERIFIER,
 	}
 	
     private final static String DIGEST_ALGORITHM = "SHA-256";
@@ -33,15 +40,17 @@ public class Signer implements SignerInterface {
 	
 	private final PublicKey pubKey;
 	private final PrivateKey privKey;
+	private final MessageDigest digestGenerator;
+	private final Cipher signCipher;
 	
-	private final HashMap<String, QueryOperation> signedQueries = new HashMap<>();
+	private final HashSet<String> signedQueriesNames = new HashSet<>();
 	
 	
-	public Signer(Mode mode, String keyFilename) throws NoSuchAlgorithmException, InvalidKeySpecException, IOException {
+	public Signer(Mode mode, String keyFilename) throws NoSuchAlgorithmException, InvalidKeySpecException, IOException, NoSuchPaddingException {
 		byte[] keyBytes = Files.readAllBytes(Paths.get(keyFilename));
 		KeyFactory kf = KeyFactory.getInstance(ENCRYPTION_ALGORITHM);
 		
-		if (mode == Mode.Signer) {
+		if (mode == Mode.SIGNER) {
 			PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
 			privKey = kf.generatePrivate(spec);
 			pubKey = null;
@@ -51,14 +60,17 @@ public class Signer implements SignerInterface {
 			pubKey = kf.generatePublic(spec);
 			privKey = null;
 		}
+
+		digestGenerator = MessageDigest.getInstance(DIGEST_ALGORITHM);
+		signCipher = Cipher.getInstance(ENCRYPTION_ALGORITHM);
 	}
 
 	@Override
-	public byte[] signQueryOperation(QueryOperation query) throws RemoteException {
+	public String signQueryOperation(QueryOperation query) throws RemoteException {
 		assert privKey != null;
 		
 		if (query.getOperation() == QueryOperation.Operation.QUERY_INSTALL) {
-			if (signedQueries.containsKey(query.getName())) {
+			if (signedQueriesNames.contains(query.getName())) {
 				// because of nature of distributed systems, even if a query has been uninstalled,
 				// we can't be sure it is not installed somewhere, so it's safer to allow
 				// sign query with given name just once
@@ -70,20 +82,50 @@ public class Signer implements SignerInterface {
 			}
 		}
 		else {
-			if (!signedQueries.containsKey(query.getName())) {
+			if (!signedQueriesNames.contains(query.getName())) {
 				throw new RemoteException("Only installed queries can be uninstalled");
 			}
 		}
 		
-		// sign and ret
-		
-		return null; // todo
+		try {
+			byte[] serialized = serializeQueryOperation(query);
+			byte[] digest = digestGenerator.digest(serialized);
+			signCipher.init(Cipher.ENCRYPT_MODE, privKey);
+			byte[] signature = signCipher.doFinal(digest);
+			signedQueriesNames.add(query.getName());
+			return Base64.getEncoder().encodeToString(signature);
+		}
+		catch (Exception ex) {
+			// for security reasons, we don't want to expose the occurred exception
+			throw new RemoteException("Query signing failed.", ex);
+		}
 	}
 	
-	public boolean checkQueryOperationSignature(QueryOperation query, byte[] signature) {
+	public boolean verifyQueryOperationSignature(QueryOperation query, String signature) throws RemoteException {
 		assert pubKey != null;
 		
-		return false; // todo
+		try {
+			byte[] serialized = serializeQueryOperation(query);
+			byte[] digest = digestGenerator.digest(serialized);
+			byte[] signatureBytes = Base64.getDecoder().decode(signature);
+			signCipher.init(Cipher.DECRYPT_MODE, pubKey);
+			byte[] originalDigest = signCipher.doFinal(signatureBytes);
+			return Arrays.equals(digest, originalDigest);
+		}
+		catch (Exception ex) {
+			// for security reasons, we don't want to expose the occurred exception
+			throw new RemoteException("Query signature validation failed.");
+		}
+	}
+
+	private byte[] serializeQueryOperation(QueryOperation query) throws IOException {
+		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+		ObjectOutputStream out2 = new ObjectOutputStream(out1);
+		out2.writeObject(query);
+		out2.close();
+		out1.close();
+
+		return out1.toByteArray();
 	}
 }
 // todo: client signs queries;
