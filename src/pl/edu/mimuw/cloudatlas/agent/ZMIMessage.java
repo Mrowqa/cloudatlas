@@ -6,8 +6,11 @@
 
 package pl.edu.mimuw.cloudatlas.agent;
 
+import java.time.Instant;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.Value;
+import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
+import pl.edu.mimuw.cloudatlas.model.ValueTime;
 
 /**
  *
@@ -21,6 +24,35 @@ public class ZMIMessage extends ModuleMessage {
 		EXECUTE_QUERIES
 	}
 
+	public static ZMIMessage installQuery(long pid, Value name, Value query) {
+		ZMIMessage ret = new ZMIMessage(pid, Type.INSTALL_QUERIES);
+		ret.value1 = name;
+		ret.valueAndFreshness = ValueAndFreshness.freshValue(query);
+		return ret;
+	}
+	
+	public static ZMIMessage uninstallQuery(long pid, Value name) {
+		ZMIMessage ret = new ZMIMessage(pid, Type.UNINSTALL_QUERIES);
+		ret.value1 = name;
+		ret.value2 = ValueTime.now();
+		return ret;
+	}
+	
+	public static ZMIMessage setZoneAttributes(long pid, Value zone, AttributesMap map) {
+		ZMIMessage ret = new ZMIMessage(pid, Type.SET_ZONE_ATTRIBUTES);
+		ret.value1 = zone;
+		ret.value2 = ValueTime.now();
+		ret.attributes = map;
+		return ret;
+	}
+	
+	public static ZMIMessage setFallbackContacts(long pid, Value contacts) {
+		ZMIMessage ret = new ZMIMessage(pid, Type.SET_FALLBACK_CONTACTS);
+		ret.value1 = contacts;
+		ret.value2 = ValueTime.now();
+		return ret;
+	}
+	
 	public ZMIMessage(Type type) {
 		this.type = type;
 	}
@@ -56,5 +88,6 @@ public class ZMIMessage extends ModuleMessage {
 	public Value value1;
 	public Value value2;
 	public Value value3;
+	public ValueAndFreshness valueAndFreshness;
 	public AttributesMap attributes;
 }

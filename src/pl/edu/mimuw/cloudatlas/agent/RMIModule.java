@@ -111,12 +111,20 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	public void installQueries(ValueList queryNames, ValueList queries, ValueList signatures) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
 		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.INSTALL_QUERIES, queryNames, queries, signatures);
+		/**if (queryNames.size() != 1 || queryNames.size() != queries.size()) {
+			throw new IllegalArgumentException("Install query support one query at the time");
+		}
+		ZMIMessage request = ZMIMessage.installQuery(pid, queryNames.get(0), queries.get(0));*/
 		waitForResponseOrError(request);
 	}
 
 	@Override
 	public void uninstallQueries(ValueList queryNames, ValueList signatures) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
+		/**if (queryNames.size() != 1) {
+			throw new IllegalArgumentException("Uninstall query support one query at the time");
+		}
+		ZMIMessage request = ZMIMessage.uninstallQuery(pid, queryNames.get(0));*/
 		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.UNINSTALL_QUERIES, queryNames, signatures);
 		waitForResponseOrError(request);
 	}
@@ -124,14 +132,14 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	@Override
 	public void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.SET_ZONE_ATTRIBUTES, zone, attributes);
+		ZMIMessage request = ZMIMessage.setZoneAttributes(pid, zone, attributes);
 		waitForResponseOrError(request);
 	}
 
 	@Override
 	public void setFallbackContacts(ValueSet contacts) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.SET_FALLBACK_CONTACTS, contacts);
+		ZMIMessage request = ZMIMessage.setFallbackContacts(pid, contacts);
 		waitForResponseOrError(request);
 	}
 	

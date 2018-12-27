@@ -13,7 +13,10 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -31,10 +34,12 @@ import pl.edu.mimuw.cloudatlas.model.Type.PrimaryType;
 import pl.edu.mimuw.cloudatlas.model.TypeCollection;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
+import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueNull;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
+import pl.edu.mimuw.cloudatlas.model.ValueTime;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 import pl.edu.mimuw.cloudatlas.signer.QueryOperation;
 import pl.edu.mimuw.cloudatlas.signer.Signer;
@@ -49,7 +54,8 @@ public class ZMIModule extends Thread implements Module {
 	private final Duration queryExecutionInterval;
 	private final Random random;
 	private final Signer signVerifier;
-	private ValueSet fallbackContacts;
+	private ValueAndFreshness fallbackContacts;
+	private Map<Attribute, ValueAndFreshness> queries;
 	private ModulesHandler modulesHandler;
 
 	@Override
@@ -72,7 +78,8 @@ public class ZMIModule extends Thread implements Module {
 		this.zmi = zmi;
 		this.queryExecutionInterval = queryExecutionInterval;
 		this.random = new Random();
-		this.fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
+		this.queries = new HashMap<>();
+		this.fallbackContacts = ValueAndFreshness.freshValue(new ValueSet(new HashSet<>(), TypePrimitive.CONTACT));
 		try {
 			this.signVerifier = new Signer(Signer.Mode.SIGN_VERIFIER, pubKeyFilename);
 		}
@@ -111,7 +118,7 @@ public class ZMIModule extends Thread implements Module {
 							response.attributes = getZoneAttributes((ValueString) message.value1);
 							break;
 						case SET_ZONE_ATTRIBUTES:
-							setZoneAttributes((ValueString) message.value1, message.attributes);
+							setZoneAttributes((ValueString) message.value1, (ValueTime)message.value2, message.attributes);
 							break;
 						case INSTALL_QUERIES:
 							installQueries((ValueList) message.value1, (ValueList) message.value2, (ValueList) message.value3);
@@ -123,7 +130,7 @@ public class ZMIModule extends Thread implements Module {
 							response.value1 = getFallbackContacts();
 							break;
 						case SET_FALLBACK_CONTACTS:
-							setFallbackContacts((ValueSet) message.value1);
+							setFallbackContacts(message.valueAndFreshness);
 							break;
 						default:
 							throw new UnsupportedOperationException("Message not supported: " + message.type);
@@ -220,24 +227,25 @@ public class ZMIModule extends Thread implements Module {
 		}
 	}
 
-	private void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException {
+	private void setZoneAttributes(ValueString zone, ValueTime freshness, AttributesMap attributes) throws RemoteException {
 		ZMI zoneZmi = findZone(zmi, new PathName(zone.getValue()));
 		if (!zoneZmi.getSons().isEmpty()) {
 			throw new IllegalArgumentException("setZoneAttributes is only allowed for singleton zone.");
 		}
 		zoneZmi.getAttributes().addOrChange(attributes);
+		zoneZmi.setFreshness(freshness);
 	}
 
-	private void setFallbackContacts(ValueSet contacts) throws RemoteException {
-		if (contacts.isNull()) {
+	private void setFallbackContacts(ValueAndFreshness contacts) throws RemoteException {
+		if (contacts.getVal().isNull()) {
 			throw new IllegalArgumentException("Fallback contacts set can't be null");
 		}
-		checkElementType((TypeCollection) contacts.getType(), PrimaryType.CONTACT);
+		checkElementType((TypeCollection) contacts.getVal().getType(), PrimaryType.CONTACT);
 		fallbackContacts = contacts;
 	}
 
 	private ValueSet getFallbackContacts() throws RemoteException {
-		return fallbackContacts;
+		return (ValueSet)fallbackContacts.getVal();
 	}
 
 	private void executeQueries() throws Exception {

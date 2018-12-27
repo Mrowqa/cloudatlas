@@ -39,9 +39,22 @@ import java.util.Map.Entry;
 public class ZMI implements Cloneable, Serializable {
 	private final AttributesMap attributes = new AttributesMap();
 	
-	private final List<ZMI> sons = new ArrayList<ZMI>();
+	private final List<ZMI> sons = new ArrayList<>();
 	private PathName pathName;
 	private ZMI father;
+	private ValueTime freshness;
+
+	public ValueTime getFreshness() {
+		return freshness;
+	}
+
+	public void setFreshness(ValueTime freshness) {
+		this.freshness = freshness;
+	}
+	
+	public void updateFreshness() {
+		this.freshness = ValueTime.now();
+	}
 	
 	/**
 	 * Creates a new ZMI with no father (the root zone) and empty sons list.
