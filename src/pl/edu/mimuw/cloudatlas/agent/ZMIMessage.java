@@ -40,6 +40,12 @@ public class ZMIMessage extends ModuleMessage {
 		this.value2 = value2;
 	}
 	
+	public ZMIMessage(long pid, Type type, Value value1, Value value2, Value value3) {
+		this(pid, type, value1);
+		this.value2 = value2;
+		this.value3 = value3;
+	}
+
 	public ZMIMessage(long pid, Type type, Value value, AttributesMap attributes) {
 		this(pid, type, value);
 		this.attributes = attributes;
@@ -49,5 +55,6 @@ public class ZMIMessage extends ModuleMessage {
 	public long pid;
 	public Value value1;
 	public Value value2;
+	public Value value3;
 	public AttributesMap attributes;
 }

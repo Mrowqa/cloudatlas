@@ -27,6 +27,7 @@ import pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder;
 public class Main {
 	private static Duration queryDuration = Duration.ofSeconds(5);
 	private static PathName targetZone;
+	private static String pubKeyFilename = "public_key.der";
 	private static boolean testCommunicationModule = false;
 	/**
 	 * @param args the command line arguments
@@ -55,7 +56,7 @@ public class Main {
 			else {
 				modules = new Module[] {
 					new RMIModule(),
-					new ZMIModule(createZmi(), queryDuration),
+					new ZMIModule(createZmi(), queryDuration, pubKeyFilename),
 					new TimerModule(),
 					new CommunicationModule(),
 				};
@@ -79,8 +80,8 @@ public class Main {
 			return;
 		}
 
-		if (args.length != 4 || !args[0].equals("--sleep") || !args[2].equals("--zone")) {
-			System.err.println("Usage: <me> --sleep <num>(h|m|s) --zone /my/leaf/node");
+		if (args.length != 6 || !args[0].equals("--sleep") || !args[2].equals("--zone") || !args[4].equals("--public-key")) {
+			System.err.println("Usage: <me> --sleep <num>(h|m|s) --zone /my/leaf/node --public-key path/to/public_key.der");
 			System.err.println("   or: <me> --test-communication-module");
 			System.exit(1);
 		}
@@ -103,6 +104,7 @@ public class Main {
 		}
 		
 		targetZone = new PathName(args[3]);
+		pubKeyFilename = args[5];
 	}
 	
 	private static ZMI createZmi() throws ParseException, UnknownHostException {

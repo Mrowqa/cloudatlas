@@ -12,6 +12,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.time.Duration;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
+import pl.edu.mimuw.cloudatlas.signer.SignerInterface;
 
 
 /**
@@ -31,11 +32,12 @@ public class Main {
 	 */
 	public static void main(String[] args) throws RemoteException, NotBoundException, InterruptedException, IOException {
 		Registry registry = LocateRegistry.getRegistry("localhost");
-		CloudAtlasInterface stub = (CloudAtlasInterface) registry.lookup("CloudAtlas");
+		CloudAtlasInterface stubZmi = (CloudAtlasInterface) registry.lookup("CloudAtlas");
+		SignerInterface stubSigner = (SignerInterface) registry.lookup("CloudAtlasSigner");
 
 		parseCmdArgs(args);
-		HistoricalDataStorage storage = new HistoricalDataStorage(stub, sleepDuration, dataHistoryLimit);
-		WebClient wcl = new WebClient(storage, stub);
+		HistoricalDataStorage storage = new HistoricalDataStorage(stubZmi, sleepDuration, dataHistoryLimit);
+		WebClient wcl = new WebClient(storage, stubZmi, stubSigner);
 		storage.start();
 		wcl.run();
 	}

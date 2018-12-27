@@ -46,6 +46,8 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
 import pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder;
 import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
 import pl.edu.mimuw.cloudatlas.model.ZMISerializer;
+import pl.edu.mimuw.cloudatlas.signer.QueryOperation;
+import pl.edu.mimuw.cloudatlas.signer.SignerInterface;
 
 /**
  *
@@ -125,7 +127,8 @@ public class Sr_labs {
 	private static void testCloudAtlasAgent() {
 		try {
 			Registry registry = LocateRegistry.getRegistry("localhost");
-			CloudAtlasInterface stub = (CloudAtlasInterface) registry.lookup("CloudAtlas");
+			CloudAtlasInterface stubZmi = (CloudAtlasInterface) registry.lookup("CloudAtlas");
+			SignerInterface stubSigner = (SignerInterface) registry.lookup("CloudAtlasSigner");
 			Scanner scanner = new Scanner(System.in);
 			scanner.useDelimiter("\\n");
 			printTestCloudAtlasMenu();
@@ -135,7 +138,7 @@ public class Sr_labs {
 				try {
 					switch (op) {
 						case 1:
-							ValueList zones = stub.getZones();
+							ValueList zones = stubZmi.getZones();
 							for (Value zone : zones) {
 								System.out.println(((ValueString) zone).getValue());
 							}
@@ -143,7 +146,7 @@ public class Sr_labs {
 						case 2:
 							System.out.println("Enter zone:");
 							arg = scanner.next();
-							AttributesMap map = stub.getZoneAttributes(new ValueString(arg));
+							AttributesMap map = stubZmi.getZoneAttributes(new ValueString(arg));
 							for (Entry<Attribute, Value> entry : map) {
 								System.out.println(entry.getKey() + ": " + entry.getValue());
 							}
@@ -159,7 +162,7 @@ public class Sr_labs {
 							ValueInt value = new ValueInt(scanner.nextLong());
 							AttributesMap attrs = new AttributesMap();
 							attrs.add(attribute.getValue(), value);
-							stub.setZoneAttributes(new ValueString(arg), attrs);
+							stubZmi.setZoneAttributes(new ValueString(arg), attrs);
 							System.out.println("Value set.");
 							break;
 						case 4:
@@ -173,7 +176,11 @@ public class Sr_labs {
 							ValueList queries = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
 							queries.add(new ValueString(query));
 
-							stub.installQueries(queryNames, queries);
+							String signature = stubSigner.signQueryOperation(QueryOperation.newQueryInstall(arg, query));
+							ValueList signatures = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
+							signatures.add(new ValueString(signature));
+
+							stubZmi.installQueries(queryNames, queries, signatures);
 							System.out.println("Query installed.");
 							break;
 						case 5:
@@ -182,7 +189,11 @@ public class Sr_labs {
 							ValueList queryNames2 = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
 							queryNames2.add(new ValueString(arg));
 
-							stub.uninstallQueries(queryNames2);
+							String signature2 = stubSigner.signQueryOperation(QueryOperation.newQueryUninstall(arg));
+							ValueList signatures2 = new ValueList(new ArrayList<>(), TypePrimitive.STRING);
+							signatures2.add(new ValueString(signature2));
+
+							stubZmi.uninstallQueries(queryNames2, signatures2);
 							System.out.println("Query uninstalled.");
 							break;
 						case 6:
@@ -196,11 +207,11 @@ public class Sr_labs {
 								InetAddress address = InetAddress.getByName(scanner.next());
 								contacts.add(new ValueContact(new PathName(arg), address));
 							}
-							stub.setFallbackContacts(contacts);
+							stubZmi.setFallbackContacts(contacts);
 							System.out.println("Fallback contacts set.");
 							break;
 						case 7:
-							ValueSet contacts1 = stub.getFallbackContacts();
+							ValueSet contacts1 = stubZmi.getFallbackContacts();
 							System.out.println("Fallback contacts:");
 							for (Value contact : contacts1) {
 								System.out.println(contact);
