@@ -128,5 +128,3 @@ public class Signer implements SignerInterface {
 		return out1.toByteArray();
 	}
 }
-// todo: client signs queries;
-// todo: query install verifies signature

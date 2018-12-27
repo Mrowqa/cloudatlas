@@ -193,7 +193,7 @@ public class ZMIModule extends Thread implements Module {
 		return null;
 	}
 
-	private void uninstallQueries(ValueList queryNames, ValueList signatures) throws RemoteException { // todo
+	private void uninstallQueries(ValueList queryNames, ValueList signatures) throws RemoteException {
 		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
 		checkElementType((TypeCollection) signatures.getType(), PrimaryType.STRING);
 		if (queryNames.size() != signatures.size()) {
