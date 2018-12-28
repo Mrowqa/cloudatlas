@@ -23,7 +23,7 @@ import pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder;
  */
 public class Main {
 	private static Duration queryDuration = Duration.ofSeconds(5);
-	private static PathName targetZone;
+	private static PathName targetZone = new PathName("/uw/violet07");
 	private static String pubKeyFilename = "public_key.der";
 	private static boolean testCommunicationModule = false;
 	/**
@@ -56,6 +56,7 @@ public class Main {
 					new ZMIModule(createZmi(), queryDuration, pubKeyFilename),
 					new TimerModule(),
 					new CommunicationModule(),
+					new GossipingModule(targetZone),
 				};
 			}
 

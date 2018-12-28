@@ -6,6 +6,8 @@
 package pl.edu.mimuw.cloudatlas.agent;
 
 import java.io.Serializable;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 
@@ -54,6 +56,10 @@ class CommunicationInfo implements Serializable {
 	
 	public CommunicationInfo(SocketAddress addr) {
 		this(addr, CommunicationTimestamps.newEmpty());
+	}
+	
+	public CommunicationInfo(InetAddress addr) {
+		this(new InetSocketAddress(addr, CommunicationModule.SOCKET_PORT));
 	}
 	
 	public CommunicationInfo(SocketAddress addr, CommunicationTimestamps ts) {

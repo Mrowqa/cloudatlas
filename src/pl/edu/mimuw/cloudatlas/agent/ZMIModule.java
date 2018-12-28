@@ -5,6 +5,7 @@
  */
 package pl.edu.mimuw.cloudatlas.agent;
 
+import java.awt.event.KeyEvent;
 import java.io.ByteArrayInputStream;
 import java.rmi.RemoteException;
 import java.util.HashSet;
@@ -104,9 +105,13 @@ public class ZMIModule extends Thread implements Module {
 					scheduleQueriesExecution();
 					continue;
 				}
-				if (message.type == ZMIMessage.Type.GET_ZMI_CONTACTS_QUERIES) {
+				if (message.type == ZMIMessage.Type.GET_GOSSIPING_AGENT_DATA) {
 					GossipingMessage msg = GossipingMessage.localZMIInfo(message.pid, zmi, fallbackContacts, queries);
 					modulesHandler.enqueue(msg);
+					continue;
+				}
+				if (message.type == ZMIMessage.Type.UPDATE_WITH_REMOTE_DATA) {
+					updateWithRemoteData(message.remoteData);
 					continue;
 				}
 					
@@ -148,6 +153,8 @@ public class ZMIModule extends Thread implements Module {
 				modulesHandler.enqueue(response);
 			} catch (InterruptedException ex) {
 				Logger.getLogger(ZMIModule.class.getName()).log(Level.FINE, null, ex);
+			} catch (Exception ex) {
+				Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
 			}
 		}
 	}
@@ -161,7 +168,7 @@ public class ZMIModule extends Thread implements Module {
 	}
 
 	private AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
-		return findZone(zmi, zone.getValue()).getAttributes();
+		return findZoneOrError(zmi, zone.getValue()).getAttributes();
 	}
 
 	private void installQuery(String name, ValueAndFreshness query, String signature) throws RemoteException {
@@ -213,7 +220,7 @@ public class ZMIModule extends Thread implements Module {
 	}
 
 	private void setZoneAttributes(ValueString zone, ValueTime freshness, AttributesMap attributes) throws RemoteException {
-		ZMI zoneZmi = findZone(zmi, new PathName(zone.getValue()));
+		ZMI zoneZmi = findZoneOrError(zmi, zone.getValue());
 		if (!zoneZmi.getSons().isEmpty()) {
 			throw new IllegalArgumentException("setZoneAttributes is only allowed for singleton zone.");
 		}
@@ -266,11 +273,19 @@ public class ZMIModule extends Thread implements Module {
 		return (new parser(lex)).pProgram();
 	}
 
-	private ZMI findZone(ZMI zmi, String name) throws RemoteException {
+	private static ZMI findZoneOrError(ZMI zmi, String name) throws RemoteException {
+		zmi = findZone(zmi, name);
+		if (zmi == null) {
+			throw new RemoteException("Zone not found.");
+		}
+		return zmi;
+	}
+	
+	public static ZMI findZone(ZMI zmi, String name) {
 		return findZone(zmi, new PathName(name));
 	}
 
-	private ZMI findZone(ZMI zmi, PathName pathName) throws RemoteException {
+	public static ZMI findZone(ZMI zmi, PathName pathName) {
 		if (pathName.getComponents().isEmpty()) {
 			return zmi;
 		}
@@ -281,7 +296,7 @@ public class ZMIModule extends Thread implements Module {
 				return findZone(son, pathName.consumePrefix());
 			}
 		}
-		throw new RemoteException("Zone not found.");
+		return null;
 	}
 	
 	private void scheduleQueriesExecution() {
@@ -310,7 +325,44 @@ public class ZMIModule extends Thread implements Module {
 		queries.put(attribute, removed);
 	}
 
-	private void sendAllInfoToGosspingModule(long pid) throws InterruptedException {
-		
+	private void updateWithRemoteData(GossipingAgentData remoteData) {
+		fallbackContacts.update(remoteData.getFallbackContacts());
+		for (Entry<Attribute, ValueAndFreshness> q : remoteData.getQueries().entrySet()) {
+			ValueAndFreshness v = queries.getOrDefault(q.getKey(), null);
+			if (v == null) {
+				queries.put(q.getKey(), q.getValue());
+			}
+				v.update(q.getValue());
+			}
+		for (ZMI remoteZmi : remoteData.getZmis()) {
+			ZMI localZmi = findZone(zmi, remoteZmi.getPathName());
+			if (localZmi == null) {
+				addZMINode(remoteZmi);
+			} else {
+				localZmi.updateAttributes(remoteZmi);
+			}
+		}
+	}
+
+	private void addZMINode(ZMI remoteZmi) {
+		PathName fatherPath = remoteZmi.getPathName().levelUp();
+		ZMI father = findZone(zmi, fatherPath);
+		if (father == null) {
+			throw new IllegalArgumentException(
+					"You can only add sons of existing nodes");
+		}
+		father.addSon(remoteZmi);
 	}
 }
+
+/**
+ * remoteData.getQueries().forEach((key, value) -> 
+				queries.merge(key, value, (v1, v2) -> v1.update(v2)));
+for (Entry<Attribute, ValueAndFreshness> q : remoteData.getQueries().entrySet()) {
+			ValueAndFreshness v = queries.getOrDefault(q.getKey(), null);
+			if (v == null) {
+				queries.
+			}
+			queries.merge(q.getKey(), v, [](ValueAndFreshness v1, ValueAndFreshness v2){ return v1.update(v2);});
+		}
+*/

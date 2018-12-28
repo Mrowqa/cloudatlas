@@ -26,6 +26,7 @@ package pl.edu.mimuw.cloudatlas.model;
 
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -37,7 +38,7 @@ import java.util.Map.Entry;
  * references to its father and sons in the tree.
  */
 public class ZMI implements Cloneable, Serializable {
-	private final AttributesMap attributes = new AttributesMap();
+	private AttributesMap attributes = new AttributesMap();
 	
 	private final List<ZMI> sons = new ArrayList<>();
 	private PathName pathName;
@@ -54,6 +55,16 @@ public class ZMI implements Cloneable, Serializable {
 	
 	public void updateFreshness() {
 		this.freshness = ValueTime.now();
+	}
+	
+	public void adjustTime(Duration diff) {
+		freshness = freshness.adjustTime(diff);
+	}
+	
+	public void updateAttributes(ZMI zmi) {
+		if (freshness.isLowerThan(zmi.freshness).getValue()) {
+			attributes = zmi.attributes;
+		}
 	}
 	
 	/**

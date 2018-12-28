@@ -28,6 +28,7 @@ import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.Instant;
 
 
@@ -105,6 +106,10 @@ public class ValueTime extends ValueSimple<Long> implements Serializable {
 		}
 		throw new IncompatibleTypesException(getType(), value.getType(), Operation.SUBTRACT);
 		
+	}
+	
+	public ValueTime adjustTime(Duration diff) {
+		return new ValueTime(getValue() + diff.toMillis());
 	}
 	
 	@Override

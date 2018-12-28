@@ -7,23 +7,37 @@
 package pl.edu.mimuw.cloudatlas.agent;
 
 import java.util.HashMap;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import pl.edu.mimuw.cloudatlas.model.PathName;
+import pl.edu.mimuw.cloudatlas.model.ValueContact;
+import pl.edu.mimuw.cloudatlas.model.ValueSet;
+import pl.edu.mimuw.cloudatlas.model.ZMI;
 
 /**
  *
  * @author pawel
  */
 public class GossipingModule extends Thread implements Module {
+	private static final ZMI[] NO_ZMI = {};
+	
+	private final PathName name;
+	private Duration resendInterval = Duration.ofSeconds(5);
 	private LinkedBlockingQueue<GossipingMessage> messages = new LinkedBlockingQueue<>();
 	private ModulesHandler handler;
 	private GossipingNodeSelector selector;
 	private int maxRetry;
 	private Map<Long, GossipingState> states = new HashMap<>();
 	private Random r = new Random();
+
+	public GossipingModule(PathName name) {
+		this.name = name;
+	}
 	
 	@Override
 	public boolean canHandleMessage(ModuleMessage message) {
@@ -64,14 +78,14 @@ public class GossipingModule extends Thread implements Module {
 						case LOCAL_ZMI_INFO:
 							handleLocalZMIInfoToSendRequest(state, msg); break;
 						case CALLBACK_RESEND_ZMI_INFO:
-							sendInfo(state, msg); break;
+							sendInfo(state); break;
 						case REMOTE_ZMI_INFO:
 							continueWithZMIInfoResponse(state, msg); break;
 						case CALLBACK_END_GOSSIPING:
-							endGossiping(msg); break;
+							states.remove(msg.pid); break;
 						default:
+							Logger.getLogger(GossipingModule.class.getName()).log(Level.FINE, "Unexpected msg type");
 							// TODO ignore callbacks or other irrelevant messages
-							throw new UnsupportedOperationException();
 					}
 				} else {
 					switch(msg.type) {
@@ -80,7 +94,7 @@ public class GossipingModule extends Thread implements Module {
 						case LOCAL_ZMI_INFO:
 							handleLocalZMIInfoToSendResponse(state, msg); break;
 						case CALLBACK_RESEND_ZMI_INFO:
-							sendInfo(state, msg); break;
+							sendInfo(state); break;
 						case ACK:
 							handleAck(state, msg); break;
 						default:
@@ -95,61 +109,162 @@ public class GossipingModule extends Thread implements Module {
 	}
 
 	private void startGossiping(GossipingState state, GossipingMessage msg) throws InterruptedException {
-		GossipingMessage nextMsg = null; // Get local ZMI info
+		ZMIMessage nextMsg = ZMIMessage.getLocalZMIInfo(state.pid);
 		state.lastMessageType = msg.type;
-		messages.put(nextMsg);
+		handler.enqueue(nextMsg);
 	}
 
-	private void handleLocalZMIInfoToSendRequest(GossipingState state, GossipingMessage msg) {
-		// Choose ZMI
-		// Select relevant info
-		// Construct request
-		// Send request
-		// Setup callback
+	private void handleLocalZMIInfoToSendRequest(GossipingState state, GossipingMessage msg) throws InterruptedException {
+		GossipingAgentData localData = msg.data;
+		ZMI localZmi = localData.getZmis()[0];
+		ValueContact contact = selector.selectNode(localZmi, (ValueSet) localData.getFallbackContacts().getVal());
+		if (contact == null) {
+			Logger.getLogger(GossipingModule.class.getName()).log(Level.FINE, "There is no contact to exchange information with.");
+			states.remove(state.pid);
+			scheduleNextGossiping();
+		}
+		state.remoteNodeName = contact.getName();
+		CommunicationInfo info = new CommunicationInfo(contact.getAddress());
+		state.info = info;
+		
+		ZMI[] zmis = getSiblings(localZmi, contact.getName());
+		localData.setZmis(zmis);
+		GossipingMessage payload = GossipingMessage.sendRemoteZMIInfo(state.pid, info, localData, name);
+		CommunicationMessage msgToSend = CommunicationMessage.sendMessage(payload);
+		state.msgToSend = msgToSend;
+		state.retryCnt = 0;
+
+		sendInfo(state);
 	}
 
-	private void sendInfo(GossipingState state, GossipingMessage msg) {
-		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	private void sendInfo(GossipingState state) throws InterruptedException {
+		if (state.retryCnt > maxRetry) {
+			return;
+		}
+		state.retryCnt++;
+		setupTimeoutCallback(state);
+		handler.enqueue(state.msgToSend);
 	}
 
-	private void continueWithZMIInfoResponse(GossipingState state, GossipingMessage msg) {
-		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	private void continueWithZMIInfoResponse(GossipingState state, GossipingMessage msg) throws InterruptedException {
+		if (state.lastMessageType == GossipingMessage.Type.REMOTE_ZMI_INFO) {
+			// We already received remote info but we got data once again.
+			// Resend ACK.
+			state.lastMessageType = GossipingMessage.Type.REMOTE_ZMI_INFO;
+			sendInfo(state);
+			return;
+		}
+		if (state.lastMessageType != GossipingMessage.Type.LOCAL_ZMI_INFO) {
+			return;
+		}
+		state.lastMessageType = GossipingMessage.Type.REMOTE_ZMI_INFO;
+		
+		GossipingAgentData data = msg.data;
+		Duration diff = msg.getCommunicationInfo().getTimestamps().getTimeDiff();
+		data.adjustTime(diff);
+		ZMIMessage updateMsg = ZMIMessage.updateWithRemoteData(state.pid, state.remoteData);
+		handler.enqueue(updateMsg);
+		
+		GossipingMessage payload = GossipingMessage.ack(state.pid, state.info);
+		CommunicationMessage msgToSend = CommunicationMessage.sendMessage(payload);
+		state.retryCnt = 0;
+		state.msgToSend = msgToSend;
+		sendInfo(state);
 	}
 
-	private void endGossiping(GossipingMessage msg) {
-		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	private void handleRequestZMIInfo(GossipingState state, GossipingMessage msg) throws InterruptedException {
+		ZMIMessage zmiMsg = ZMIMessage.getLocalZMIInfo(state.pid);
+		state.lastMessageType = GossipingMessage.Type.LOCAL_ZMI_INFO;
+		handler.enqueue(zmiMsg);
 	}
 
-	private void handleRequestZMIInfo(GossipingState state, GossipingMessage msg) {
-		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	private void handleLocalZMIInfoToSendResponse(GossipingState state, GossipingMessage msg) throws InterruptedException {
+		state.lastMessageType = GossipingMessage.Type.REMOTE_ZMI_INFO;
+		GossipingAgentData data = msg.data;
+		ZMI zmi[] = getSiblings(data.getZmis()[0], state.remoteNodeName);
+		data.setZmis(zmi);
+		GossipingMessage payload = GossipingMessage.sendRemoteZMIInfo(state.pid, state.info, data, name);
+		CommunicationMessage msgToSend = CommunicationMessage.sendMessage(msg);
+		state.msgToSend = msgToSend;
+		state.retryCnt = 0;
+		sendInfo(state);
+	}
+	
+
+	private void handleAck(GossipingState state, GossipingMessage msg) throws InterruptedException {
+		Duration timeDiff = msg.getCommunicationInfo().getTimestamps().getTimeDiff();
+		state.remoteData.adjustTime(timeDiff);
+		
+		ZMIMessage updateMsg = ZMIMessage.updateWithRemoteData(state.pid, state.remoteData);
+		handler.enqueue(updateMsg);
+		states.remove(state.pid);
 	}
 
-	private void handleLocalZMIInfoToSendResponse(GossipingState state, GossipingMessage msg) {
-		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	private void scheduleNextGossiping() throws InterruptedException {
+		long pid = r.nextLong();
+		GossipingMessage innerMsg = GossipingMessage.callbackStartGossiping(pid);
+		TimerMessage msg = TimerMessage.scheduleOneTimeCallback(pid, resendInterval, innerMsg);
+		handler.enqueue(msg);
 	}
 
-	private void handleAck(GossipingState state, GossipingMessage msg) {
-		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	private ZMI[] getSiblings(ZMI zmi, PathName name) {
+		if (name.getComponents().isEmpty()) {
+			return NO_ZMI;
+		}
+		String singletonName = name.getSingletonName();
+		name = name.levelUp();
+
+		ZMI parrentZmi = ZMIModule.findZone(zmi, name);
+		if (parrentZmi == null) {
+			return NO_ZMI;
+		}
+		
+		ArrayList result = new ArrayList();
+		for (ZMI child : parrentZmi.getSons()) {
+			if (!child.getPathName().getName().equals(singletonName)) {
+				result.add(child.clone());
+			}
+		}
+		return (ZMI[]) result.toArray();
+	}
+	
+	private void setupTimeoutCallback(GossipingState state) throws InterruptedException {
+		GossipingMessage innerMsg = null;
+		if (state.lastMessageType == GossipingMessage.Type.LOCAL_ZMI_INFO) {
+			innerMsg = GossipingMessage.callbackResendZMIInfo(state.pid);
+		} else { // GossipingMessage.Type.REMOTE_ZMI_INFO
+			innerMsg = GossipingMessage.callbackEndGossiping(state.pid);
+		}
+		TimerMessage msg = TimerMessage.scheduleOneTimeCallback(state.pid, resendInterval, innerMsg);
+		handler.enqueue(msg);
 	}
 }
 
 class GossipingState {
 	public boolean initializedByMe;
+	public long pid;
 	public GossipingMessage.Type lastMessageType;
-	public GossipingMessage msgToSend;
-	public int tries;
+	public CommunicationMessage msgToSend;
+	public int retryCnt;
+
+	public GossipingAgentData remoteData;
 	public CommunicationInfo info;
+	public PathName remoteNodeName;
 	
-	private GossipingState(boolean initializedByMe) {
+	private GossipingState(boolean initializedByMe, long pid) {
 		this.initializedByMe = initializedByMe;
 	}
 	
 	public static GossipingState fromFirstMessageOrNull(GossipingMessage msg) {
 		if (msg.type == GossipingMessage.Type.CALLBACK_START_GOSSIPING) {
-			return new GossipingState(true);
+			return new GossipingState(true, msg.pid);
 		}
 		if (msg.type == GossipingMessage.Type.REMOTE_ZMI_INFO) {
-			return new GossipingState(false);
+			GossipingState state = new GossipingState(false, msg.pid);
+			state.info = msg.getCommunicationInfo();
+			state.remoteNodeName = msg.pathName;
+			state.remoteData = msg.data;
+			return state;
 		}
 		return null;
 	}

@@ -29,10 +29,8 @@ public class GossipingMessage extends ModuleMessage implements NetworkSendable {
 	public Type type;
 	public long pid;
 	
-	public ZMI[] zmi;
-	public ValueAndFreshness fallbackContacts;
-	public Map<Attribute, ValueAndFreshness> queries;
-	public PathName senderPathName;
+	public PathName pathName;
+	public GossipingAgentData data;
 	
 	private GossipingMessage(Type type, long msgId) {
 		this.type = type;
@@ -47,24 +45,18 @@ public class GossipingMessage extends ModuleMessage implements NetworkSendable {
 			ValueAndFreshness fallbackContacts, 
 			Map<Attribute, ValueAndFreshness> queries) {
 		GossipingMessage msg = new GossipingMessage(Type.LOCAL_ZMI_INFO, msgId);
-		msg.zmi = new ZMI[1];
-		msg.zmi[0] = zmi;
-		msg.fallbackContacts = fallbackContacts;
-		msg.queries = queries;
+		msg.data = new GossipingAgentData(zmi, fallbackContacts, queries);
 		return msg;
 	}
 	
-	public static GossipingMessage sendRemoteZMIInfo(long msgId, ZMI[] zmi, 
+	public static GossipingMessage sendRemoteZMIInfo(long msgId, 
 			CommunicationInfo info,
-			ValueAndFreshness fallbackContacts, 
-			Map<Attribute, ValueAndFreshness> queries,
+			GossipingAgentData data,
 			PathName senderPathName) {
 		GossipingMessage msg = new GossipingMessage(Type.REMOTE_ZMI_INFO, msgId);
 		msg.info = info;
-		msg.zmi = zmi;
-		msg.fallbackContacts = fallbackContacts;
-		msg.queries = queries;
-		msg.senderPathName = senderPathName;
+		msg.data = data;
+		msg.pathName = senderPathName;
 		return msg;
 	}
 	

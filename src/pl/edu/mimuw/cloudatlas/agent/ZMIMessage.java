@@ -6,7 +6,6 @@
 
 package pl.edu.mimuw.cloudatlas.agent;
 
-import java.time.Instant;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
@@ -21,11 +20,17 @@ public class ZMIMessage extends ModuleMessage {
 		GET_ZMI, GET_ZONES, GET_ZONE_ATTRIBUTES, SET_ZONE_ATTRIBUTES, 
 		INSTALL_QUERIES, UNINSTALL_QUERIES, 
 		SET_FALLBACK_CONTACTS, GET_FALLBACK_CONTACTS,
-		EXECUTE_QUERIES, GET_ZMI_CONTACTS_QUERIES
+		EXECUTE_QUERIES, GET_GOSSIPING_AGENT_DATA, UPDATE_WITH_REMOTE_DATA
 	}
 
 	public static ZMIMessage getLocalZMIInfo(long pid) {
-		return new ZMIMessage(pid, Type.GET_ZMI_CONTACTS_QUERIES);
+		return new ZMIMessage(pid, Type.GET_GOSSIPING_AGENT_DATA);
+	}
+	
+	public static ZMIMessage updateWithRemoteData(long pid, GossipingAgentData data) {
+		ZMIMessage ret = new ZMIMessage(pid, Type.UPDATE_WITH_REMOTE_DATA);
+		ret.remoteData = data;
+		return ret;
 	}
 	
 	public static ZMIMessage installQuery(long pid, Value name, Value query, Value signature) {
@@ -95,4 +100,5 @@ public class ZMIMessage extends ModuleMessage {
 	public Value value3;
 	public ValueAndFreshness valueAndFreshness;
 	public AttributesMap attributes;
+	public GossipingAgentData remoteData;
 }

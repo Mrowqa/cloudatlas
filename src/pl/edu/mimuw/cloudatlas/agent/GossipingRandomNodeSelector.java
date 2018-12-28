@@ -6,6 +6,7 @@
 
 package pl.edu.mimuw.cloudatlas.agent;
 
+import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.ValueContact;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
@@ -14,6 +15,12 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  *
  * @author pawel
  */
-public interface GossipingNodeSelector {
-	public ValueContact selectNode(ZMI zmi, ValueSet fallbackContacts); // TODO make sure we do not select ourself!
+public class GossipingRandomNodeSelector implements GossipingNodeSelector {
+	private PathName name;
+	
+	@Override
+	public ValueContact selectNode(ZMI zmi, ValueSet fallbackContacts) {
+		return null;
+	}
+	
 }

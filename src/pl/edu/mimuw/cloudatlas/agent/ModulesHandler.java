@@ -6,6 +6,8 @@
 
 package pl.edu.mimuw.cloudatlas.agent;
 
+import pl.edu.mimuw.cloudatlas.model.PathName;
+
 
 /**
  *
@@ -24,7 +26,7 @@ public class ModulesHandler {
 			m.start();
 		}
 	}
-	
+		
 	public void enqueue(ModuleMessage message) throws InterruptedException {
 		assert message != null;
 
