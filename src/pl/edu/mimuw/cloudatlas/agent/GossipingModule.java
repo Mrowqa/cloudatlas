@@ -115,25 +115,14 @@ public class GossipingModule extends Thread implements Module {
 	}
 
 	private void handleLocalZMIInfoToSendRequest(GossipingState state, GossipingMessage msg) throws InterruptedException {
-		GossipingAgentData localData = msg.data;
-		ZMI localZmi = localData.getZmis()[0];
-		ValueContact contact = selector.selectNode(localZmi, (ValueSet) localData.getFallbackContacts().getVal());
-		if (contact == null) {
-			Logger.getLogger(GossipingModule.class.getName()).log(Level.FINE, "There is no contact to exchange information with.");
+		try {
+			selectNodeForGossiping(state, msg.data);
+		} catch (IllegalArgumentException ex) {
+			Logger.getLogger(GossipingModule.class.getName()).log(Level.SEVERE, null, ex);
 			states.remove(state.pid);
 			scheduleNextGossiping();
 		}
-		state.remoteNodeName = contact.getName();
-		CommunicationInfo info = new CommunicationInfo(contact.getAddress());
-		state.info = info;
-		
-		ZMI[] zmis = getSiblings(localZmi, contact.getName());
-		localData.setZmis(zmis);
-		GossipingMessage payload = GossipingMessage.sendRemoteZMIInfo(state.pid, info, localData, name);
-		CommunicationMessage msgToSend = CommunicationMessage.sendMessage(payload);
-		state.msgToSend = msgToSend;
-		state.retryCnt = 0;
-
+		prepareRemoteAgentDataMsg(state, msg.data);
 		sendInfo(state);
 	}
 
@@ -165,31 +154,48 @@ public class GossipingModule extends Thread implements Module {
 		ZMIMessage updateMsg = ZMIMessage.updateWithRemoteData(state.pid, state.remoteData);
 		handler.enqueue(updateMsg);
 		
-		GossipingMessage payload = GossipingMessage.ack(state.pid, state.info);
-		CommunicationMessage msgToSend = CommunicationMessage.sendMessage(payload);
-		state.retryCnt = 0;
-		state.msgToSend = msgToSend;
+		prepareAckMsg(state);
 		sendInfo(state);
 	}
 
 	private void handleRequestZMIInfo(GossipingState state, GossipingMessage msg) throws InterruptedException {
-		ZMIMessage zmiMsg = ZMIMessage.getLocalZMIInfo(state.pid);
 		state.lastMessageType = GossipingMessage.Type.LOCAL_ZMI_INFO;
+		ZMIMessage zmiMsg = ZMIMessage.getLocalZMIInfo(state.pid);
 		handler.enqueue(zmiMsg);
 	}
 
 	private void handleLocalZMIInfoToSendResponse(GossipingState state, GossipingMessage msg) throws InterruptedException {
 		state.lastMessageType = GossipingMessage.Type.REMOTE_ZMI_INFO;
-		GossipingAgentData data = msg.data;
-		ZMI zmi[] = getSiblings(data.getZmis()[0], state.remoteNodeName);
-		data.setZmis(zmi);
-		GossipingMessage payload = GossipingMessage.sendRemoteZMIInfo(state.pid, state.info, data, name);
-		CommunicationMessage msgToSend = CommunicationMessage.sendMessage(msg);
-		state.msgToSend = msgToSend;
-		state.retryCnt = 0;
+		prepareRemoteAgentDataMsg(state, msg.data);
 		sendInfo(state);
 	}
 	
+	private void prepareRemoteAgentDataMsg(GossipingState state, GossipingAgentData localData) {
+		ZMI localZmi = localData.getZmis()[0];
+		localData.setZmis(getSiblings(localZmi, state.remoteName));
+		GossipingMessage payload = GossipingMessage.sendRemoteZMIInfo(state.pid, state.info, localData, name);
+		CommunicationMessage msgToSend = CommunicationMessage.sendMessage(payload);
+		
+		state.msgToSend = msgToSend;
+		state.retryCnt = 0;
+	}
+	
+	private void prepareAckMsg(GossipingState state) {
+		GossipingMessage payload = GossipingMessage.ack(state.pid, state.info);
+		CommunicationMessage msgToSend = CommunicationMessage.sendMessage(payload);
+		state.retryCnt = 0;
+		state.msgToSend = msgToSend;
+	}
+	
+	private void selectNodeForGossiping(GossipingState state, GossipingAgentData localData) {
+		ZMI localZmi = localData.getZmis()[0];
+		ValueContact contact = selector.selectNode(localZmi, (ValueSet) localData.getFallbackContacts().getVal());
+		if (contact == null) {
+			throw new IllegalArgumentException("");
+		}
+		state.remoteName = contact.getName();
+		state.info = new CommunicationInfo(contact.getAddress());;
+	}
 
 	private void handleAck(GossipingState state, GossipingMessage msg) throws InterruptedException {
 		Duration timeDiff = msg.getCommunicationInfo().getTimestamps().getTimeDiff();
@@ -249,7 +255,7 @@ class GossipingState {
 
 	public GossipingAgentData remoteData;
 	public CommunicationInfo info;
-	public PathName remoteNodeName;
+	public PathName remoteName;
 	
 	private GossipingState(boolean initializedByMe, long pid) {
 		this.initializedByMe = initializedByMe;
@@ -262,7 +268,7 @@ class GossipingState {
 		if (msg.type == GossipingMessage.Type.REMOTE_ZMI_INFO) {
 			GossipingState state = new GossipingState(false, msg.pid);
 			state.info = msg.getCommunicationInfo();
-			state.remoteNodeName = msg.pathName;
+			state.remoteName = msg.pathName;
 			state.remoteData = msg.data;
 			return state;
 		}
