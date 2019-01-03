@@ -4,9 +4,11 @@
  * and open the template in the editor.
  */
 
-package pl.edu.mimuw.cloudatlas.agent;
+package pl.edu.mimuw.cloudatlas.agent.dissemination;
 
+import java.io.Serializable;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
@@ -16,10 +18,10 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  *
  * @author pawel
  */
-public class GossipingAgentData {
+public class AgentData implements Serializable {
 	private ZMI[] zmis;
 	private ValueAndFreshness fallbackContacts;
-	private Map<Attribute, ValueAndFreshness> queries;
+	private HashMap<Attribute, ValueAndFreshness> queries;
 
 	public void setZmis(ZMI[] zmis) {
 		this.zmis = zmis;
@@ -37,13 +39,13 @@ public class GossipingAgentData {
 		return queries;
 	}
 
-	public GossipingAgentData(ZMI zmi, ValueAndFreshness fallbackContacts, Map<Attribute, ValueAndFreshness> queries) {
+	public AgentData(ZMI zmi, ValueAndFreshness fallbackContacts, HashMap<Attribute, ValueAndFreshness> queries) {
 		this.zmis = new ZMI[]{zmi};
 		this.fallbackContacts = fallbackContacts;
 		this.queries = queries;
 	}
 	
-	public GossipingAgentData(ZMI[] zmis, ValueAndFreshness fallbackContacts, Map<Attribute, ValueAndFreshness> queries) {
+	public AgentData(ZMI[] zmis, ValueAndFreshness fallbackContacts, HashMap<Attribute, ValueAndFreshness> queries) {
 		this.zmis = zmis;
 		this.fallbackContacts = fallbackContacts;
 		this.queries = queries;

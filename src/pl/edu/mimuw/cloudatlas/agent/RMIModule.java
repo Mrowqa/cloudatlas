@@ -49,8 +49,10 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	private final MessagesCollection messages;
 	private ModulesHandler modulesHandler;
 	volatile AtomicLong nextPid;
+	private final String zoneName;
 
-	public RMIModule() {
+	public RMIModule(String name) {
+		this.zoneName = name;
 		this.nextPid = new AtomicLong(0L);
 		this.messages = new MessagesCollection();
 	}
@@ -75,7 +77,7 @@ public class RMIModule implements CloudAtlasInterface, Module {
 		try {
 			CloudAtlasInterface stub = (CloudAtlasInterface) UnicastRemoteObject.exportObject(this, 0);
 			Registry registry = LocateRegistry.getRegistry();
-			registry.rebind("CloudAtlas", stub);
+			registry.rebind("CloudAtlas" + zoneName, stub);
 		}
 		catch (RemoteException ex) { // will be caught in main
 			throw new RuntimeException(ex);

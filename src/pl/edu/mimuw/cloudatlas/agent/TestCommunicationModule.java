@@ -21,6 +21,11 @@ import java.util.logging.Logger;
 public class TestCommunicationModule extends Thread implements Module {
 	private final LinkedBlockingQueue<TestCommunicationMessage> messages = new LinkedBlockingQueue<>();
 	private final Random random = new Random();
+	private final int port;
+
+	public TestCommunicationModule(int port) {
+		this.port = port;
+	}
 	private ModulesHandler modulesHandler;
 	private byte[] nextExpectedMessage;
 	
@@ -59,7 +64,7 @@ public class TestCommunicationModule extends Thread implements Module {
 			random.nextBytes(nextExpectedMessage);
 			TestCommunicationMessage msg = new TestCommunicationMessage(nextExpectedMessage);
 			CommunicationInfo info = new CommunicationInfo(new InetSocketAddress(
-					InetAddress.getLocalHost(), CommunicationModule.SOCKET_PORT));
+					InetAddress.getLocalHost(), port));
 			msg.setCommunicationInfo(info);
 			CommunicationMessage msg2 = CommunicationMessage.sendMessage(msg);
 			modulesHandler.enqueue(msg2);

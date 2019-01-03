@@ -86,8 +86,10 @@ public class ZMIJSONSerializer {
 					// two steps, because we want to add both or neither
 					String name = ((ValueContact)v).getName().toString();
 					String address = ((ValueContact)v).getAddress().toString();
+					int port = ((ValueContact)v).getPort();
 					obj.put("n", name);
 					obj.put("a", address);
+					obj.put("p", port);
 				}
 				catch (NullPointerException ex) {}
 				break;
@@ -178,7 +180,7 @@ public class ZMIJSONSerializer {
 							address = address.substring(0, sepPos);
 						}
 					}
-					return new ValueContact(new PathName(obj.getString("n")), InetAddress.getByName(address));
+					return new ValueContact(new PathName(obj.getString("n")), InetAddress.getByName(address), obj.getInt("p"));
 				}
 				catch (UnknownHostException ex) {}
 				break;

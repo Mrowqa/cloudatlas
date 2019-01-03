@@ -18,7 +18,7 @@ import java.util.List;
  * @author pawel
  */
 public class ZMIHierarchyBuilder {
-	private static ValueContact createContact(String path, byte ip1, byte ip2, byte ip3, byte ip4)
+	public static ValueContact createContact(String path, byte ip1, byte ip2, byte ip3, byte ip4)
 			throws UnknownHostException {
 		return new ValueContact(new PathName(path), InetAddress.getByAddress(new byte[] {
 			ip1, ip2, ip3, ip4
@@ -172,6 +172,60 @@ public class ZMIHierarchyBuilder {
 		return root;
 	}
 
+	public static ZMI createHierarchyForNodeSelectionTest() throws ParseException, UnknownHostException {
+		ValueContact violet07Contact = createContact("/uw/violet07", (byte)1, (byte)1, (byte)1, (byte)10);
+		ValueContact khaki13Contact = createContact("/uw/khaki13", (byte)2, (byte)1, (byte)1, (byte)38);
+		ValueContact khaki31Contact = createContact("/uw/khaki31", (byte)3, (byte)1, (byte)1, (byte)39);
+		ValueContact whatever01Contact = createContact("/uw/whatever01", (byte)4, (byte)1, (byte)1, (byte)1);
+		ValueContact whatever02Contact = createContact("/uw/whatever02", (byte)5, (byte)1, (byte)1, (byte)1);		
+		
+		List<Value> list;
+		
+		ZMI root = new ZMI();
+		root.getAttributes().add("level", new ValueInt(0l));
+		root.getAttributes().add("contacts", new ValueSet(TypePrimitive.CONTACT));
+		
+		ZMI uw = new ZMI(root, "uw");
+		root.addSon(uw);
+		uw.getAttributes().add("level", new ValueInt(1l));
+		uw.getAttributes().add("owner", new ValueString("/uw/violet07"));
+		list = Arrays.asList(new Value[]{violet07Contact});
+		uw.getAttributes().add("contacts", new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT));
+		
+		ZMI pjwstk = new ZMI(root, "pjwstk");
+		root.addSon(pjwstk);
+		list = Arrays.asList(new Value[]{whatever01Contact, whatever02Contact});
+		pjwstk.getAttributes().add("level", new ValueInt(1l));
+		pjwstk.getAttributes().add("contacts", new ValueSet(new HashSet<>(list),TypePrimitive.CONTACT));
+		
+		ZMI violet07 = new ZMI(uw, "violet07");
+		uw.addSon(violet07);
+		violet07.getAttributes().add("level", new ValueInt(2l));
+		list = Arrays.asList(new Value[] {
+			violet07Contact
+		});
+		violet07.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		
+		ZMI khaki31 = new ZMI(uw, "khaki31");
+		uw.addSon(khaki31);
+		khaki31.getAttributes().add("level", new ValueInt(2l));
+		khaki31.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		list = Arrays.asList(new Value[] {
+			khaki31Contact
+		});
+		
+		ZMI khaki13 = new ZMI(uw, "khaki13");
+		uw.addSon(khaki13);
+		khaki13.getAttributes().add("level", new ValueInt(2l));
+		list = Arrays.asList(new Value[] {
+			khaki13Contact,
+		});
+		khaki13.getAttributes().add("contacts", new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT));
+
+
+		return root;
+	}
+	
 	public static ZMI createDefaultHierarchy() throws ParseException, UnknownHostException {
 		ZMI root;
 		ValueContact uw1 = createContact("/uw1", (byte)10, (byte)1, (byte)1, (byte)10);

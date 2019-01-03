@@ -5,23 +5,21 @@
  */
 package pl.edu.mimuw.cloudatlas.agent;
 
-import java.awt.event.KeyEvent;
+import pl.edu.mimuw.cloudatlas.agent.dissemination.AgentData;
+import pl.edu.mimuw.cloudatlas.agent.dissemination.DisseminationMessage;
 import java.io.ByteArrayInputStream;
 import java.rmi.RemoteException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
+import org.json.JSONObject;
 import pl.edu.mimuw.cloudatlas.interpreter.AttributesExtractor;
 import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
 import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
@@ -32,11 +30,8 @@ import pl.edu.mimuw.cloudatlas.interpreter.query.parser;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
-import pl.edu.mimuw.cloudatlas.model.Type.PrimaryType;
-import pl.edu.mimuw.cloudatlas.model.TypeCollection;
-import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
-import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
+import pl.edu.mimuw.cloudatlas.model.ValueDuration;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueNull;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
@@ -52,14 +47,30 @@ import pl.edu.mimuw.cloudatlas.signer.Signer;
  */
 public class ZMIModule extends Thread implements Module {
 	private final LinkedBlockingQueue<ZMIMessage> messages;
-	private final ZMI zmi;
-	private final Duration queryExecutionInterval;
 	private final Random random;
+	private final ZMI zmi;
+	private final PathName name;
+	private final HashMap<Attribute, ValueAndFreshness> queries;
 	private final Signer signVerifier;
 	private ValueAndFreshness fallbackContacts;
-	private Map<Attribute, ValueAndFreshness> queries;
+	private Duration queryExecutionInterval = Duration.ofSeconds(5);
+	private Duration removeOutdatedZonesInterval = Duration.ofSeconds(60); // Interval between two events of removing outdated zones
+	private Duration zoneOutdatedDuration = Duration.ofSeconds(60); // Duration after a zone become outdated
 	private ModulesHandler modulesHandler;
 
+	public static ZMIModule createModule(PathName name, ZMI zmi, ValueSet fallbackContacts, String pubKeyFilename, JSONObject config) {
+		ZMIModule module = new ZMIModule(zmi, name, fallbackContacts, pubKeyFilename);
+		if (config == null)
+			return module;
+		if (config.has("queryExecutionInterval"))
+			module.queryExecutionInterval = ConfigUtils.parseInterval(config.getString("queryExecutionInterval"));
+		if (config.has("removeOutdatedZonesInterval"))
+			module.removeOutdatedZonesInterval = ConfigUtils.parseInterval(config.getString("removeOutdatedZonesInterval"));
+		if (config.has("zoneOutdatedDuration"))
+			module.zoneOutdatedDuration = ConfigUtils.parseInterval(config.getString("zoneOutdatedDuration"));
+		return module;
+	}
+	
 	@Override
 	public void setModulesHandler(ModulesHandler modulesHandler) {
 		this.modulesHandler = modulesHandler;
@@ -75,13 +86,13 @@ public class ZMIModule extends Thread implements Module {
 		messages.put((ZMIMessage) message);
 	}
 
-	public ZMIModule(ZMI zmi, Duration queryExecutionInterval, String pubKeyFilename) {
+	public ZMIModule(ZMI zmi, PathName name, ValueSet fallbackContacts, String pubKeyFilename) {
 		this.messages = new LinkedBlockingQueue<>();
-		this.zmi = zmi;
-		this.queryExecutionInterval = queryExecutionInterval;
 		this.random = new Random();
 		this.queries = new HashMap<>();
-		this.fallbackContacts = ValueAndFreshness.freshValue(new ValueSet(new HashSet<>(), TypePrimitive.CONTACT));
+		this.zmi = zmi;
+		this.name = name;
+		this.fallbackContacts = ValueAndFreshness.freshValue(fallbackContacts);
 		try {
 			this.signVerifier = new Signer(Signer.Mode.SIGN_VERIFIER, pubKeyFilename);
 		}
@@ -93,8 +104,10 @@ public class ZMIModule extends Thread implements Module {
 	@Override
 	public void run() {
 		scheduleQueriesExecution();
+		scheduleRemoveOutdatedZonesEvent();
 		while (true) {
 			try {
+				// TODO refactor with switch statement
 				ZMIMessage message = messages.take();
 				if (message.type == ZMIMessage.Type.EXECUTE_QUERIES) {
 					try {
@@ -106,12 +119,18 @@ public class ZMIModule extends Thread implements Module {
 					continue;
 				}
 				if (message.type == ZMIMessage.Type.GET_GOSSIPING_AGENT_DATA) {
-					GossipingMessage msg = GossipingMessage.localZMIInfo(message.pid, zmi, fallbackContacts, queries);
+					DisseminationMessage msg = DisseminationMessage.localAgentData(message.pid, zmi, fallbackContacts, queries);
 					modulesHandler.enqueue(msg);
 					continue;
 				}
 				if (message.type == ZMIMessage.Type.UPDATE_WITH_REMOTE_DATA) {
+					System.out.println("ZMI update data");
 					updateWithRemoteData(message.remoteData);
+					continue;
+				}
+				if (message.type == ZMIMessage.Type.REMOVE_OUTDATED_ZONES) {
+					removeOutdatedZones();
+					scheduleRemoveOutdatedZonesEvent();
 					continue;
 				}
 					
@@ -299,6 +318,26 @@ public class ZMIModule extends Thread implements Module {
 		return null;
 	}
 	
+	public static ZMI[] getSiblings(ZMI zmi, PathName name) {
+		if (name.getComponents().isEmpty()) {
+			return new ZMI[]{};
+		}
+		ZMI father = ZMIModule.findZone(zmi, name.levelUp());
+		if (father == null) {
+			return new ZMI[]{};
+		}
+		
+		ArrayList<ZMI> result = new ArrayList();
+		String singletonName = name.getSingletonName();
+		for (ZMI child : father.getSons()) {
+			String childName = child.getPathName().getSingletonName();
+			if (!childName.equals(singletonName)) {
+				result.add(child.clone());
+			}
+		}
+		return (ZMI[]) result.toArray(new ZMI[]{});
+	}
+	
 	private void scheduleQueriesExecution() {
 		long id = random.nextLong();
 		ZMIMessage callbackMessage = new ZMIMessage(ZMIMessage.Type.EXECUTE_QUERIES);
@@ -325,7 +364,7 @@ public class ZMIModule extends Thread implements Module {
 		queries.put(attribute, removed);
 	}
 
-	private void updateWithRemoteData(GossipingAgentData remoteData) {
+	private void updateWithRemoteData(AgentData remoteData) {
 		fallbackContacts.update(remoteData.getFallbackContacts());
 		for (Entry<Attribute, ValueAndFreshness> q : remoteData.getQueries().entrySet()) {
 			ValueAndFreshness v = queries.getOrDefault(q.getKey(), null);
@@ -353,16 +392,39 @@ public class ZMIModule extends Thread implements Module {
 		}
 		father.addSon(remoteZmi);
 	}
-}
-
-/**
- * remoteData.getQueries().forEach((key, value) -> 
-				queries.merge(key, value, (v1, v2) -> v1.update(v2)));
-for (Entry<Attribute, ValueAndFreshness> q : remoteData.getQueries().entrySet()) {
-			ValueAndFreshness v = queries.getOrDefault(q.getKey(), null);
-			if (v == null) {
-				queries.
-			}
-			queries.merge(q.getKey(), v, [](ValueAndFreshness v1, ValueAndFreshness v2){ return v1.update(v2);});
+	
+	private void scheduleRemoveOutdatedZonesEvent() {
+		ZMIMessage innerMsg = ZMIMessage.removeOutdatedZones();
+		TimerMessage msg = TimerMessage.scheduleOneTimeCallback(random.nextLong(), removeOutdatedZonesInterval, innerMsg);
+		try {
+			modulesHandler.enqueue(msg);
+		} catch (InterruptedException ex) {
+			Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
 		}
-*/
+	}
+	
+	private void removeOutdatedZones() {
+		System.out.println("Remove outdated zones event");
+		ValueTime minTime = (ValueTime)ValueTime.now().subtract(new ValueDuration(0, zoneOutdatedDuration.toMillis()));
+		removeOutdatedZones(zmi, minTime);
+	}
+
+	private void removeOutdatedZones(ZMI zmi, ValueTime minTime) {
+		List<ZMI> toRemove = new ArrayList<>();
+		ZMI nextZmi = null;
+		for (ZMI son : zmi.getSons()) {
+			if (name.startsWith(son.getPathName())) {
+				nextZmi = son;
+			} else if (son.getFreshness().isLowerThan(minTime).getValue()) {
+				toRemove.add(son);
+			}
+		}
+		for (ZMI son : toRemove) {
+			System.out.println("Removing outadet zone " + son.getPathName());
+			zmi.removeSon(son);
+		}
+		if (nextZmi != null) {
+			removeOutdatedZones(nextZmi, minTime);
+		}
+	}
+}

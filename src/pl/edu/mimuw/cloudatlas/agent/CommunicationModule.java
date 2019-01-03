@@ -28,15 +28,16 @@ import java.util.logging.Logger;
  * @author mrowqa
  */
 public class CommunicationModule extends Thread implements Module {
-	public final static int SOCKET_PORT = 42777;
 	public final static Duration SOCKET_RECOVERY_INTERVAL = Duration.ofSeconds(15);  // just for the demo
-	
+	public final int socketPort;
+
 	private final LinkedBlockingQueue<CommunicationMessage> messages;
 	private ModulesHandler modulesHandler;
 	private DatagramChannel networkChannel;
 	private ModuleMessageFragmentationHandler messageFragmentationHandler;
 	
-	public CommunicationModule() {
+	public CommunicationModule(int socketPort) {
+		this.socketPort = socketPort;
 		this.messages = new LinkedBlockingQueue<>();
 		this.messageFragmentationHandler = new ModuleMessageFragmentationHandler();
 	}
@@ -101,7 +102,7 @@ public class CommunicationModule extends Thread implements Module {
 		try {
 			networkChannel = DatagramChannel.open();
 			networkChannel.configureBlocking(true);
-			networkChannel.bind(new InetSocketAddress(SOCKET_PORT));
+			networkChannel.bind(new InetSocketAddress(socketPort));
 		}
 		catch (IOException ex) {
 			Logger.getLogger(CommunicationModule.class.getName()).log(Level.SEVERE, null, ex);
@@ -338,7 +339,7 @@ class PartiallyConstructedModuleMessage {
 		NetworkSendable msgSendable = (NetworkSendable) msg;
 		CommunicationInfo info = msgSendable.getCommunicationInfo();
 		msgSendable.setCommunicationInfo(new CommunicationInfo(
-				info.getAddress(),
+				sender,
 				info.getTimestamps().newWithNextGap(calculateTimeGap())));
 
 		return msg;

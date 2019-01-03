@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import org.json.JSONObject;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
@@ -43,12 +44,16 @@ public class WebClient {
 	private final CloudAtlasInterface zmiRmi;
 	private final SignerInterface signerRmi;
 	private final HistoricalDataStorage dataStorage;
-	private final static int httpPort = 8000;
+	private int httpPort = 8000;
 	
-	public WebClient(HistoricalDataStorage dataStorage, CloudAtlasInterface zmiRmi, SignerInterface signerRmi) {
+	public WebClient(HistoricalDataStorage dataStorage, CloudAtlasInterface zmiRmi, SignerInterface signerRmi, JSONObject config) {
 		this.dataStorage = dataStorage;
 		this.zmiRmi = zmiRmi;
 		this.signerRmi = signerRmi;
+		if (config != null && config.has("httpPort"))
+			httpPort = config.getInt("httpPort");
+		else 
+			System.out.println("Info: Using default port " + httpPort);
 	}
 	
 	public void run() throws IOException {

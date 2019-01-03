@@ -5,30 +5,25 @@
  */
 package sr_labs;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
+import pl.edu.mimuw.cloudatlas.agent.dissemination.NodeSelector;
+import pl.edu.mimuw.cloudatlas.agent.dissemination.RandomExponentialNodeSelector;
+import pl.edu.mimuw.cloudatlas.agent.dissemination.RandomUniformNodeSelector;
 import pl.edu.mimuw.cloudatlas.fetcher.Fetcher;
-import static pl.edu.mimuw.cloudatlas.interpreter.Main.executeQueries;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
@@ -43,9 +38,9 @@ import pl.edu.mimuw.cloudatlas.model.ValueDouble;
 import pl.edu.mimuw.cloudatlas.model.ValueInt;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
-import pl.edu.mimuw.cloudatlas.model.ValueTime;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 import pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder;
+import static pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder.createContact;
 import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
 import pl.edu.mimuw.cloudatlas.model.ZMISerializer;
 import pl.edu.mimuw.cloudatlas.signer.QueryOperation;
@@ -61,9 +56,10 @@ public class Sr_labs {
 	 * @param args the command line arguments
 	 */
 	public static void main(String[] args) throws ParseException, UnknownHostException, IOException {
+		testNodeSelection();
 		//testSerialize();
 		//testSerializeJSON();
-		testCloudAtlasAgent();
+		//testCloudAtlasAgent();
 		//testFetcherDataCollection();
 	}
 
@@ -247,5 +243,32 @@ public class Sr_labs {
 	private static void testFetcherDataCollection() {
 		AttributesMap attrs = Fetcher.collectData();
 		System.out.println(attrs);
+	}
+	
+	private static void testNodeSelection() throws ParseException, UnknownHostException {
+		int numRepeats = 100;
+		PathName name = new PathName("/uw/violet07");
+		ValueContact violet07Contact = createContact("/uw/violet07", (byte)1, (byte)1, (byte)1, (byte)10);
+		ValueContact whatever01Contact = ZMIHierarchyBuilder.createContact("/uw/whatever01", (byte)4, (byte)1, (byte)1, (byte)1);
+		ValueContact whatever02Contact = ZMIHierarchyBuilder.createContact("/uw/whatever02", (byte)5, (byte)1, (byte)1, (byte)1);
+		List<Value> list = Arrays.asList(new Value[] {whatever01Contact, whatever02Contact, violet07Contact});
+		
+		ValueSet fallback = new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT);
+		ZMI zmi = ZMIHierarchyBuilder.createHierarchyForNodeSelectionTest(); // ZMIHierarchyBuilder.createLeafNodeHierarchy(name); 
+		NodeSelector selector = NodeSelector.createByName("randomExponential", name);
+		
+		HashMap<String, Integer> nodeCount = new HashMap<>();
+		for (int i = 0; i < numRepeats; i++) {
+			ValueContact contact = selector.selectNode(zmi, fallback);
+			String nodeName = contact.getName().getName();
+			nodeCount.compute(nodeName, (k, v) -> (v == null) ? 1 : v + 1);
+			System.out.println(i + ": "+ contact);	
+		}
+		for (Entry<String, Integer> entry : nodeCount.entrySet()) {
+			System.out.println(entry.getKey() + " : " + entry.getValue());
+		}
+		
+		// TODO count how many reached with some map
+		// TODO check if we do not select ourself from fallback contacts
 	}
 }

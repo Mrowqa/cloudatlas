@@ -190,4 +190,8 @@ public class PathName implements Serializable {
 	public String toString() {
 		return name.equals("")? "/" : getName();
 	}
+	
+	public boolean startsWith(PathName other) {
+		return name.startsWith(other.name);
+	}
 }

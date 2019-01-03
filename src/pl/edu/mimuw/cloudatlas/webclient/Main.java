@@ -6,12 +6,16 @@
 package pl.edu.mimuw.cloudatlas.webclient;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.time.Duration;
+import org.json.JSONObject;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
+import pl.edu.mimuw.cloudatlas.agent.ConfigUtils;
 import pl.edu.mimuw.cloudatlas.signer.SignerInterface;
 
 
@@ -20,9 +24,10 @@ import pl.edu.mimuw.cloudatlas.signer.SignerInterface;
  * @author mrowqa
  */
 public class Main {
-
+	private static String zoneName = "/uw/khaki13";
 	private static Duration sleepDuration = Duration.ofSeconds(5);
 	private static Duration dataHistoryLimit = null;
+	private static JSONObject config = null;
 
 	/**
 	 * @param args the command line arguments
@@ -31,13 +36,18 @@ public class Main {
 	 * @throws java.lang.InterruptedException
 	 */
 	public static void main(String[] args) throws RemoteException, NotBoundException, InterruptedException, IOException {
+		try {
+			parseCmdArgs(args);
+		} catch (Exception ex) {
+			System.err.println("Exception parsing command args: " + ex.getMessage());
+			System.exit(1);
+		}
 		Registry registry = LocateRegistry.getRegistry("localhost");
-		CloudAtlasInterface stubZmi = (CloudAtlasInterface) registry.lookup("CloudAtlas");
+		CloudAtlasInterface stubZmi = (CloudAtlasInterface) registry.lookup("CloudAtlas" + zoneName);
 		SignerInterface stubSigner = (SignerInterface) registry.lookup("CloudAtlasSigner");
 
-		parseCmdArgs(args);
 		HistoricalDataStorage storage = new HistoricalDataStorage(stubZmi, sleepDuration, dataHistoryLimit);
-		WebClient wcl = new WebClient(storage, stubZmi, stubSigner);
+		WebClient wcl = new WebClient(storage, stubZmi, stubSigner, config);
 		storage.start();
 		wcl.run();
 	}
@@ -47,21 +57,33 @@ public class Main {
 			return;
 		}
 
+		if (args.length == 2 && args[0].equals("--config-file")) {
+			try {
+				parseConfigFile(args[1]);
+			} catch (Exception ex) {
+				System.err.println("Exception while reading configuration file: " + args[1] + 
+						" " + ex.getMessage());
+				System.exit(1);
+			}
+			return;
+		}
+		
 		if (args.length != 2 || !args[0].equals("--sleep")) {
-			System.err.println("Usage: <me> --sleep <num>(h|m|s)");
+			System.err.println("Usage: <me> --config-file /path/to/config/file.conf");
+			System.err.println("or   : <me> --sleep <num>(h|m|s)");
 			System.exit(1);
 		}
 
-		char sleepUnit = args[1].charAt(args[1].length() - 1);
-		int sleepValue = Integer.parseInt(args[1].substring(0, args[1].length() - 1));
-		switch (sleepUnit) {
-			case 'h': { sleepDuration = Duration.ofHours(sleepValue); break; }
-			case 'm': { sleepDuration = Duration.ofMinutes(sleepValue); break; }
-			case 's': { sleepDuration = Duration.ofSeconds(sleepValue); break; }
-			default: {
-				System.err.println("Invalid time unit: " + sleepUnit);
-				System.exit(1);
-			}
-		}
+		sleepDuration = ConfigUtils.parseInterval(args[1]);
+	}
+
+	private static void parseConfigFile(String file) throws IOException {
+		String content = new String(Files.readAllBytes(Paths.get(file)));
+		JSONObject obj = new JSONObject(content);
+		if (obj.has("name"))
+			zoneName = obj.getString("name");
+		if (!obj.has("webclient"))
+			return;
+		config = obj.getJSONObject("webclient");
 	}
 }

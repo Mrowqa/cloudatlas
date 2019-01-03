@@ -66,7 +66,7 @@ public class ValueSet extends ValueSimple<Set<Value>> implements Set<Value>, Ser
 	 * @param elementType type of elements stored in this set
 	 */
 	public ValueSet(Type elementType) {
-		super(new HashSet<Value>());
+		super(new HashSet<>());
 		type = new TypeCollection(Type.PrimaryType.SET, elementType);
 	}
 	

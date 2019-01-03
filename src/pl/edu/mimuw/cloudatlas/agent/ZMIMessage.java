@@ -6,6 +6,7 @@
 
 package pl.edu.mimuw.cloudatlas.agent;
 
+import pl.edu.mimuw.cloudatlas.agent.dissemination.AgentData;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
@@ -20,14 +21,15 @@ public class ZMIMessage extends ModuleMessage {
 		GET_ZMI, GET_ZONES, GET_ZONE_ATTRIBUTES, SET_ZONE_ATTRIBUTES, 
 		INSTALL_QUERIES, UNINSTALL_QUERIES, 
 		SET_FALLBACK_CONTACTS, GET_FALLBACK_CONTACTS,
-		EXECUTE_QUERIES, GET_GOSSIPING_AGENT_DATA, UPDATE_WITH_REMOTE_DATA
+		EXECUTE_QUERIES, REMOVE_OUTDATED_ZONES,
+		GET_GOSSIPING_AGENT_DATA, UPDATE_WITH_REMOTE_DATA
 	}
 
 	public static ZMIMessage getLocalZMIInfo(long pid) {
 		return new ZMIMessage(pid, Type.GET_GOSSIPING_AGENT_DATA);
 	}
 	
-	public static ZMIMessage updateWithRemoteData(long pid, GossipingAgentData data) {
+	public static ZMIMessage updateWithRemoteData(long pid, AgentData data) {
 		ZMIMessage ret = new ZMIMessage(pid, Type.UPDATE_WITH_REMOTE_DATA);
 		ret.remoteData = data;
 		return ret;
@@ -61,6 +63,10 @@ public class ZMIMessage extends ModuleMessage {
 		ZMIMessage ret = new ZMIMessage(pid, Type.SET_FALLBACK_CONTACTS);
 		ret.valueAndFreshness = ValueAndFreshness.freshValue(contacts);
 		return ret;
+	}
+	
+	public static ZMIMessage removeOutdatedZones() {
+		return new ZMIMessage(Type.REMOVE_OUTDATED_ZONES);
 	}
 	
 	public ZMIMessage(Type type) {
@@ -100,5 +106,5 @@ public class ZMIMessage extends ModuleMessage {
 	public Value value3;
 	public ValueAndFreshness valueAndFreshness;
 	public AttributesMap attributes;
-	public GossipingAgentData remoteData;
+	public AgentData remoteData;
 }

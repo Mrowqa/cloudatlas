@@ -90,6 +90,7 @@ public class ZMI implements Cloneable, Serializable {
 		} else {
 			pathName = father.getPathName().levelDown(name);
 		}
+		freshness = ValueTime.now();
 		//initRequiredAttributes(name);
 	}
 	
@@ -133,6 +134,13 @@ public class ZMI implements Cloneable, Serializable {
 	 */
 	public List<ZMI> getSons() {
 		return Collections.unmodifiableList(sons);
+	}
+	
+	public ZMI getSonBySingletonName(String singletonName) {
+		for (ZMI son : sons)
+			if (son.getPathName().getSingletonName().equals(singletonName))
+				return son;
+		return null;
 	}
 	
 	/**
