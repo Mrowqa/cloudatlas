@@ -7,17 +7,24 @@
 package pl.edu.mimuw.cloudatlas.agent;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import pl.edu.mimuw.cloudatlas.agent.dissemination.DisseminationModule;
 import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.nio.file.Files;
 import java.text.ParseException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.ConsoleHandler;
 import org.json.JSONObject;
 import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
+import pl.edu.mimuw.cloudatlas.model.Value;
+import pl.edu.mimuw.cloudatlas.model.ValueContact;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 import pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder;
@@ -32,11 +39,11 @@ public class Main {
 	private static JSONObject config = null;
 	private static PathName targetZone = new PathName("/uw/violet07");
 	private static int socketPort = 42777;
+	private static String localContactIp = "127.0.0.1";
 	private static String pubKeyFilename = "public_key.der";
 	private static boolean testCommunicationModule = false;
 	private static ValueSet fallbackContacts = new ValueSet(TypePrimitive.CONTACT);
 
-	// TODO make Exchange config initialized by config structure.
 	/** 
 	 * @param args the command line arguments
 	 */
@@ -70,7 +77,7 @@ public class Main {
 					new RMIModule(targetZone.getName()),
 					new TimerModule(),
 					new CommunicationModule(socketPort),
-					ZMIModule.createModule(targetZone, createZmi(), fallbackContacts, pubKeyFilename, config),
+					ZMIModule.createModule(targetZone, createZmi(), fallbackContacts, pubKeyFilename, createLocalContacts(), config),
 					DisseminationModule.createModule(targetZone, config),
 				};
 			}
@@ -133,9 +140,19 @@ public class Main {
 			fallbackContacts = (ValueSet)ZMIJSONSerializer.JSONToValue(config.getJSONObject("fallbackContacts"));
 		if (config.has("socketPort")) 
 			socketPort = config.getInt("socketPort");
+		if (config.has("localContactIp"))
+			localContactIp = config.getString("localContactIp");
 	}
 	
 	public static ZMI createZmi() throws ParseException, UnknownHostException {
 		return ZMIHierarchyBuilder.createLeafNodeHierarchy(targetZone);
+	}
+	
+	public static ValueSet createLocalContacts() throws UnknownHostException {
+		InetAddress address = Inet4Address.getByName(localContactIp);
+		ValueContact contact = new ValueContact(targetZone, address, socketPort);
+		System.out.println("Local contact " + contact);
+		List<Value> list = Arrays.asList(new Value[]{contact});
+ 		return new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT);
 	}
 }

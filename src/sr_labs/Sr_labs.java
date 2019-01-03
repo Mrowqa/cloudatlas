@@ -20,9 +20,8 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Scanner;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
+import pl.edu.mimuw.cloudatlas.agent.ZMIModule;
 import pl.edu.mimuw.cloudatlas.agent.dissemination.NodeSelector;
-import pl.edu.mimuw.cloudatlas.agent.dissemination.RandomExponentialNodeSelector;
-import pl.edu.mimuw.cloudatlas.agent.dissemination.RandomUniformNodeSelector;
 import pl.edu.mimuw.cloudatlas.fetcher.Fetcher;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
@@ -56,7 +55,8 @@ public class Sr_labs {
 	 * @param args the command line arguments
 	 */
 	public static void main(String[] args) throws ParseException, UnknownHostException, IOException {
-		testNodeSelection();
+		testZMIModuleUtilFunctions();
+		//testNodeSelection();
 		//testSerialize();
 		//testSerializeJSON();
 		//testCloudAtlasAgent();
@@ -115,6 +115,13 @@ public class Sr_labs {
 		System.out.println("OK");
 	}
 
+	private static void testZMIModuleUtilFunctions() throws ParseException, UnknownHostException {
+		ZMI zmi = ZMIHierarchyBuilder.createTestHierarchy();
+		PathName name = new PathName("/uw/violet07");
+		PathName otherName = new PathName("/uw/khaki13");
+		ZMIModule.removeInfoUnrelevantForTheOther(zmi, name, otherName);
+	}
+	
 	private static void collectAttributesMaps(ZMI zmi, List<AttributesMap> attrs) {
 		attrs.add(zmi.getAttributes());
 		for (ZMI son : zmi.getSons()) {
@@ -267,8 +274,5 @@ public class Sr_labs {
 		for (Entry<String, Integer> entry : nodeCount.entrySet()) {
 			System.out.println(entry.getKey() + " : " + entry.getValue());
 		}
-		
-		// TODO count how many reached with some map
-		// TODO check if we do not select ourself from fallback contacts
 	}
 }

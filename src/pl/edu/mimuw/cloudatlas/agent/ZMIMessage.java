@@ -22,11 +22,11 @@ public class ZMIMessage extends ModuleMessage {
 		INSTALL_QUERIES, UNINSTALL_QUERIES, 
 		SET_FALLBACK_CONTACTS, GET_FALLBACK_CONTACTS,
 		EXECUTE_QUERIES, REMOVE_OUTDATED_ZONES,
-		GET_GOSSIPING_AGENT_DATA, UPDATE_WITH_REMOTE_DATA
+		GET_LOCAL_AGENT_DATA, UPDATE_WITH_REMOTE_DATA
 	}
 
-	public static ZMIMessage getLocalZMIInfo(long pid) {
-		return new ZMIMessage(pid, Type.GET_GOSSIPING_AGENT_DATA);
+	public static ZMIMessage getLocalAgentData(long pid) {
+		return new ZMIMessage(pid, Type.GET_LOCAL_AGENT_DATA);
 	}
 	
 	public static ZMIMessage updateWithRemoteData(long pid, AgentData data) {

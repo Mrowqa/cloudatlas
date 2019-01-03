@@ -33,9 +33,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import pl.edu.mimuw.cloudatlas.model.TypeCollection;
-import pl.edu.mimuw.cloudatlas.model.Value;
-import pl.edu.mimuw.cloudatlas.model.ValueSet;
 
 /**
  * A value representing a set of values of the specified type. Implements <code>Set</code> interface.
@@ -125,6 +122,18 @@ public class ValueSet extends ValueSimple<Set<Value>> implements Set<Value>, Ser
 		if(!type.getElementType().isCompatible(element.getType()))
 			throw new IllegalArgumentException("This set contains elements of type " + type.getElementType().toString()
 					+ " only. Not compatibile with elements of type: " + element.getType().toString());
+	}
+		
+	public ValueSet random(int size) {
+		List<Value> list = new ArrayList<>();
+		for (Value v : getValue())
+			list.add(v);
+
+		Type elementType = ((TypeCollection)getType()).getElementType();
+		if (list.size() > size)
+			Collections.shuffle(list);
+		int indexTo = Math.min(size, list.size());
+		return new ValueSet(new HashSet(list.subList(0, indexTo)), elementType);
 	}
 	
 	@Override

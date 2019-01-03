@@ -19,16 +19,16 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  * @author pawel
  */
 public class AgentData implements Serializable {
-	private ZMI[] zmis;
+	private ZMI zmi;
 	private ValueAndFreshness fallbackContacts;
 	private HashMap<Attribute, ValueAndFreshness> queries;
 
-	public void setZmis(ZMI[] zmis) {
-		this.zmis = zmis;
+	public void setZmi(ZMI zmi) {
+		this.zmi = zmi;
 	}
 	
-	public ZMI[] getZmis() {
-		return zmis;
+	public ZMI getZmi() {
+		return zmi;
 	}
 
 		public ValueAndFreshness getFallbackContacts() {
@@ -40,24 +40,16 @@ public class AgentData implements Serializable {
 	}
 
 	public AgentData(ZMI zmi, ValueAndFreshness fallbackContacts, HashMap<Attribute, ValueAndFreshness> queries) {
-		this.zmis = new ZMI[]{zmi};
+		this.zmi = zmi;
 		this.fallbackContacts = fallbackContacts;
 		this.queries = queries;
 	}
 	
-	public AgentData(ZMI[] zmis, ValueAndFreshness fallbackContacts, HashMap<Attribute, ValueAndFreshness> queries) {
-		this.zmis = zmis;
-		this.fallbackContacts = fallbackContacts;
-		this.queries = queries;
-	}
 	
 	public void adjustTime(Duration diff) {
-		for (ZMI zmi : zmis) {
-			zmi.adjustTime(diff);
-		}
+		zmi.adjustTime(diff);
 		fallbackContacts.adjustTime(diff);
-		for (ValueAndFreshness query : queries.values()) {
+		for (ValueAndFreshness query : queries.values())
 			query.adjustTime(diff);
-		}
 	}
 }

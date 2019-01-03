@@ -21,10 +21,6 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  *
  * @author pawel
  */
-// TODO check data flow, whether we are seting communication info correct
-// TODO examine in which moment you switch states
-// TODO callback resend fix
-// TODO czy my swapujemy communication info dla sendera i reveivera?
 public class ExchangeProcess {
 	enum State {
 		INITIALIZED,
@@ -56,7 +52,6 @@ public class ExchangeProcess {
 	private ExchangeProcess(boolean initializedByMe, long pid, ExchangeProcesConfig config, DisseminationMessage msg) {
 		this(initializedByMe, pid, config);
 		this.info = msg.getCommunicationInfo();
-		System.out.println("Creating process, communication info: " + info.getAddress());
 		this.remoteName = msg.pathName;
 		this.remoteData = msg.data;
 	}
@@ -149,19 +144,19 @@ public class ExchangeProcess {
 
 	private void requestLocalData() throws InterruptedException {
 		state = State.WAITING_FOR_LOCAL_DATA;
-		config.handler.enqueue(ZMIMessage.getLocalZMIInfo(pid));
+		config.handler.enqueue(ZMIMessage.getLocalAgentData(pid));
 	}
 
 	private void handleLocalDataToSendRequest(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
 		state = State.WAITING_FOR_REMOTE_DATA;
 		selectNodeForExchange(msg.data);
-		System.out.println("Selected node " + remoteName);
+		//System.out.println("Selected node " + remoteName);
 		prepareRemoteDataMsg(msg.data);
 		sendDataToRemote();
 	}
 
 	private void sendDataToRemote() throws InterruptedException, TooManyTriesException {
-		if (retryCnt > config.maxRetry) {
+		if (retryCnt >= config.maxRetry) {
 			throw new TooManyTriesException("We resend message to the remote host maximum number of times: " + retryCnt);
 		}
 		retryCnt++;
@@ -183,7 +178,7 @@ public class ExchangeProcess {
 
 	private void handleRemoteDataRequest(DisseminationMessage msg) throws InterruptedException {
 		state = State.WAITING_FOR_LOCAL_DATA;
-		config.handler.enqueue(ZMIMessage.getLocalZMIInfo(pid));
+		config.handler.enqueue(ZMIMessage.getLocalAgentData(pid));
 	}
 
 	private void handleLocalDataToSendResponse(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
@@ -193,8 +188,7 @@ public class ExchangeProcess {
 	}
 
 	private void prepareRemoteDataMsg(AgentData localData) {
-		ZMI localZmi = localData.getZmis()[0];
-		localData.setZmis(ZMIModule.getSiblings(localZmi, remoteName));
+		ZMIModule.removeInfoUnrelevantForTheOther(localData.getZmi(), config.name, remoteName);
 		DisseminationMessage payload = DisseminationMessage.remoteAgentData(pid, info, localData, config.name);
 		msgToSend = CommunicationMessage.sendMessage(payload);
 		retryCnt = 0;
@@ -207,7 +201,7 @@ public class ExchangeProcess {
 	}
 
 	private void selectNodeForExchange(AgentData localData) {
-		ZMI localZmi = localData.getZmis()[0];
+		ZMI localZmi = localData.getZmi();
 		ValueContact contact = config.selector.selectNode(localZmi, (ValueSet) localData.getFallbackContacts().getVal());
 		if (contact == null) {
 			throw new IllegalArgumentException("There is no node to exchange information with.");

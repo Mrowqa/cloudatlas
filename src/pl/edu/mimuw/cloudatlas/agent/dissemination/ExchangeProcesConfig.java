@@ -17,7 +17,6 @@ import pl.edu.mimuw.cloudatlas.model.PathName;
  * @author pawel
  */
 public class ExchangeProcesConfig {
-	// TODO change all fields to private and add getters
 	public final PathName name;
 	public final NodeSelector selector;
 	

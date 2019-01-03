@@ -24,8 +24,6 @@ import pl.edu.mimuw.cloudatlas.model.PathName;
  *
  * @author pawel
  */
-// TODO cancel all callbacks once we are shutting down
-// TODO deep copy when passing data through messages
 public class DisseminationModule extends Thread implements Module {
 	private final ExchangeProcesConfig config;
 	private ModulesHandler handler;
@@ -75,13 +73,13 @@ public class DisseminationModule extends Thread implements Module {
 		while(true) {
 			try {
 				DisseminationMessage msg = messages.take();
+				//System.out.println("Got msg with pid "+ msg.pid +" and type " + msg.type + " in dissemination module.");
 				ExchangeProcess proc = processes.getOrDefault(msg.pid, null);
-				System.out.println("Pid "+ msg.pid +" msg " + msg + " " + msg.type);
 				if (proc == null) {
 					proc = ExchangeProcess.fromFirstMessage(msg, config);
 					if (proc == null) {
 						// Incorrect type of first message. Skipping.
-						Logger.getLogger(ZMIModule.class.getName()).log(Level.FINE, 
+						Logger.getLogger(ZMIModule.class.getName()).log(Level.FINEST, 
 								"Got message of type {0} with unknown process id {1}", 
 								new Object[]{msg.type, msg.pid});
 						continue;
@@ -95,9 +93,10 @@ public class DisseminationModule extends Thread implements Module {
 					assert proc.isFinished();
 				}
 				if (proc.isFinished()) {
-					System.out.println("Proc is finished ");
+					//System.out.println("Exchange process " + msg.pid + "finished.");
+					handler.enqueue(TimerMessage.cancelCallback(msg.pid));
 					if (proc.isInitializedByMe()) {
-						System.out.println("Scheduling new dissemination");
+						//System.out.println("Scheduling next dissemination.");
 						scheduleNextDissemination();
 					}
 					processes.remove(msg.pid);

@@ -40,7 +40,7 @@ import java.util.Map.Entry;
 public class ZMI implements Cloneable, Serializable {
 	private AttributesMap attributes = new AttributesMap();
 	
-	private final List<ZMI> sons = new ArrayList<>();
+	private List<ZMI> sons = new ArrayList<>();
 	private PathName pathName;
 	private ZMI father;
 	private ValueTime freshness;
@@ -59,12 +59,29 @@ public class ZMI implements Cloneable, Serializable {
 	
 	public void adjustTime(Duration diff) {
 		freshness = freshness.adjustTime(diff);
+		for (ZMI son : sons) 
+			son.adjustTime(diff);
 	}
 	
 	public void updateAttributes(ZMI zmi) {
 		if (freshness.isLowerThan(zmi.freshness).getValue()) {
 			attributes = zmi.attributes;
+			freshness = zmi.freshness;
 		}
+	}
+	
+	public void updateEachOtherContacts(ZMI zmi, int contactsPerNode) {
+		ValueSet mergedContacts = new ValueSet(TypePrimitive.CONTACT);
+		ValueSet remoteContacts = (ValueSet) zmi.attributes.getOrNull("contacts");
+		if (remoteContacts != null)
+			mergedContacts.addAll(remoteContacts);
+		ValueSet localContacts = (ValueSet) attributes.getOrNull("contacts");
+		if (localContacts != null)
+			mergedContacts.addAll(localContacts);
+		
+		mergedContacts = mergedContacts.random(contactsPerNode);
+		attributes.addOrChange("contacts", mergedContacts);
+		zmi.attributes.addOrChange("contacts", mergedContacts);
 	}
 	
 	/**
@@ -173,6 +190,18 @@ public class ZMI implements Cloneable, Serializable {
 	 */
 	public AttributesMap getAttributes() {
 		return attributes;
+	}
+	
+	// Might be usefull to remove unused data before sending ZMI in information dissemination.
+	public void removeAllAttributesExceptContacts() {
+		Value contacts = attributes.getOrNull("contacts");
+		attributes = new AttributesMap();
+		if (contacts != null)
+			attributes.add("contacts", contacts);
+	}
+	
+	public void removeSons() {
+		sons = new ArrayList<>();
 	}
 	
 	/**
