@@ -372,7 +372,7 @@ class PartiallyConstructedModuleMessage {
 final class ModuleMessageFragment {
 	public static final int MY_HEADER_SIZE = 24;
 	public static final int USER_DATA_SIZE_LIMIT =
-			576   // minimum guaranteed MTU in the internet
+			1024  // we're allowed by lecturer to assume that datagram could have 1 KiB in size
 			- 40  // max(IPv4 header, IPv6 header)
 			- 8   // UDP header
 			- MY_HEADER_SIZE;
