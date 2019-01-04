@@ -66,7 +66,7 @@ public class Signer implements SignerInterface {
 	}
 
 	@Override
-	public String signQueryOperation(QueryOperation query) throws RemoteException {
+	public synchronized String signQueryOperation(QueryOperation query) throws RemoteException {
 		assert privKey != null;
 		
 		if (query.getOperation() == QueryOperation.Operation.QUERY_INSTALL) {
