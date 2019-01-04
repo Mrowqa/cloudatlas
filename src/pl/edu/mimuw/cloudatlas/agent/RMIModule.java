@@ -16,6 +16,7 @@ import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.Type;
 import pl.edu.mimuw.cloudatlas.model.TypeCollection;
+import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
@@ -155,6 +156,14 @@ public class RMIModule implements CloudAtlasInterface, Module {
 		
 		ZMIMessage request = ZMIMessage.uninstallQuery(pid, queryNames.get(0), signatures.get(0));
 		waitForResponseOrError(request);
+	}
+	
+	@Override
+	public HashMap<Attribute, ValueAndFreshness> getAllQueries() throws RemoteException {
+		long pid = nextPid.getAndIncrement();
+		ZMIMessage request = ZMIMessage.getAllQueries(pid);
+		RMIMessage response = waitForResponseOrError(request);
+		return response.queries;
 	}
 
 	@Override

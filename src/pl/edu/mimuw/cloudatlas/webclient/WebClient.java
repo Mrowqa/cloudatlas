@@ -62,6 +62,7 @@ public class WebClient {
 		server.createContext("/static", new GetStaticFileHandler());
 		server.createContext("/query/install", new InstallQueryHandler());
 		server.createContext("/query/uninstall", new UninstallQueryHandler());
+		server.createContext("/query/get", new GetAllQueriesHandler());
 		server.createContext("/zones/get", new GetZonesHandler());
 		server.createContext("/zones/attributes/get", new GetZoneAttributesHandler());
 		server.createContext("/zones/attributes/set", new SetZoneAttributesHandler());
@@ -282,6 +283,25 @@ public class WebClient {
 			}
 
 			// ok, we are ready to send the response.
+			WebClient.sendResponse(t, 200, rmiResult);
+		}
+	}
+	
+	private class GetAllQueriesHandler implements HttpHandler {
+		@Override
+		public void handle(HttpExchange t) throws IOException {
+			if (!t.getRequestMethod().equals("GET")) {
+				return;
+			}
+			
+			String rmiResult;
+			try {
+				rmiResult = ZMIJSONSerializer.allQueriesToJSONString(zmiRmi.getAllQueries());
+			}
+			catch (Exception ex) {
+				rmiResult = "Error:\n" + exceptionToString(ex);
+			}
+			
 			WebClient.sendResponse(t, 200, rmiResult);
 		}
 	}

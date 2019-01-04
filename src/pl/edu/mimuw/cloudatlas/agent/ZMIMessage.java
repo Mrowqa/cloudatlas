@@ -6,7 +6,9 @@
 
 package pl.edu.mimuw.cloudatlas.agent;
 
+import java.util.HashMap;
 import pl.edu.mimuw.cloudatlas.agent.dissemination.AgentData;
+import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
@@ -19,10 +21,10 @@ import pl.edu.mimuw.cloudatlas.model.ValueTime;
 public class ZMIMessage extends ModuleMessage {
 	public enum Type {
 		GET_ZMI, GET_ZONES, GET_ZONE_ATTRIBUTES, SET_ZONE_ATTRIBUTES, 
-		INSTALL_QUERIES, UNINSTALL_QUERIES, 
+		INSTALL_QUERIES, UNINSTALL_QUERIES, GET_ALL_QUERIES,
 		SET_FALLBACK_CONTACTS, GET_FALLBACK_CONTACTS,
 		EXECUTE_QUERIES, REMOVE_OUTDATED_ZONES,
-		GET_LOCAL_AGENT_DATA, UPDATE_WITH_REMOTE_DATA
+		GET_LOCAL_AGENT_DATA, UPDATE_WITH_REMOTE_DATA,
 	}
 
 	public static ZMIMessage getLocalAgentData(long pid) {
@@ -48,6 +50,11 @@ public class ZMIMessage extends ModuleMessage {
 		ret.value1 = name;
 		ret.value2 = ValueTime.now();
 		ret.value3 = signature;
+		return ret;
+	}
+	
+	public static ZMIMessage getAllQueries(long pid) {
+		ZMIMessage ret = new ZMIMessage(pid, Type.GET_ALL_QUERIES);
 		return ret;
 	}
 	
@@ -107,4 +114,5 @@ public class ZMIMessage extends ModuleMessage {
 	public ValueAndFreshness valueAndFreshness;
 	public AttributesMap attributes;
 	public AgentData remoteData;
+	public HashMap<Attribute, ValueAndFreshness> queries;
 }

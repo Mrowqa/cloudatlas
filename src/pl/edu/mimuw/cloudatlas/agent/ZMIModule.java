@@ -56,7 +56,7 @@ public class ZMIModule extends Thread implements Module {
 	private final Random random;
 	private final ZMI zmi;
 	private final PathName name;
-	private final HashMap<Attribute, ValueAndFreshness> queries;
+	private final HashMap<Attribute, ValueAndFreshness> queries;  // todo remember signatures; you can also patch webclient to display signatures -> basically you just change map type here, try to recompile, fix mismatching type errors, and try again :P
 	private final Signer signVerifier;
 	private ValueAndFreshness fallbackContacts;
 	private Duration queryExecutionInterval = Duration.ofSeconds(5);
@@ -175,6 +175,9 @@ public class ZMIModule extends Thread implements Module {
 							break;
 						case UNINSTALL_QUERIES:
 							uninstallQuery(((ValueString)message.value1).getValue(), (ValueTime) message.value2, ((ValueString) message.value3).getValue());
+							break;
+						case GET_ALL_QUERIES:
+							response.queries = new HashMap<>(queries); // shallow copy is just fine (we only read once created keys and values)
 							break;
 						case GET_FALLBACK_CONTACTS:
 							response.value1 = getFallbackContacts();

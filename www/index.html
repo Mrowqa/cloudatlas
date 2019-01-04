@@ -38,6 +38,12 @@
                 </a>
               </li>
               <li class="nav-item">
+                <a class="nav-link" href="#all-queries">
+                  <span data-feather="cloud-lightning"></span>
+                  All queries
+                </a>
+              </li>
+              <li class="nav-item">
                 <a class="nav-link" href="#fallback-contacts">
                   <span data-feather="anchor"></span>
                   Fallback contacts
@@ -89,6 +95,21 @@
               </div>
             </div>
             <button id="uninstall-query-button" class="btn btn-primary"><span data-feather="zap-off"></span> Uninstall query</button>
+          </div>
+          
+          
+          <div id="all-queries" class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">All queries</h1>
+          </div>
+          <div>
+            <p>Empty text is a certificate of query deletion. Freshness is a timestamp.</p>
+            <!-- it was meant to be a nicely formatted table... -->
+            <div class="form-group">
+              <textarea class="form-control" id="all-queries-input" name="all-queries-input" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <button class="btn btn-primary" id="get-all-queries" type="submit"><span data-feather="cloud-lightning"></span> Get 'em all</button>
+            </div>
           </div>
           
           

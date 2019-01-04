@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
 import org.json.JSONArray;
 import org.json.JSONObject;
 // JSON "docs": 
@@ -261,5 +262,19 @@ public class ZMIJSONSerializer {
 			default:
 				throw new IllegalArgumentException("Unknown type!");
 		}
+	}
+	
+	public static String allQueriesToJSONString(HashMap<Attribute, ValueAndFreshness> queries) {
+		JSONArray arr = new JSONArray();
+		
+		for (Entry<Attribute, ValueAndFreshness> q : queries.entrySet()) {
+			JSONObject obj = new JSONObject();
+			obj.put("name", q.getKey().getName());
+			obj.put("text", ((ValueString) q.getValue().getVal()).getValue());
+			obj.put("freshness", q.getValue().getFreshness().getValue());
+			arr.put(obj);
+		}
+		
+		return arr.toString();
 	}
 }

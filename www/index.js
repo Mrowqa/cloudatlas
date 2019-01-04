@@ -35,6 +35,16 @@ $(document).ready(function() {
         });
     });
 
+    $("#get-all-queries").click(function() {
+        $.get("/query/get", function (data) {
+            $("#all-queries-input").val(prettifyJSON(data));
+            alert("OK");
+        })
+        .fail(function( jqXHR, textStatus, errorThrown ) {
+            alert(textStatus);
+        });
+    });
+
     $("#get-fallback-contacts").click(function() {
         $.get("/fallback-contacts/get", function (data) {
             $("#fallback-contacts-input").val(prettifyJSON(data));
