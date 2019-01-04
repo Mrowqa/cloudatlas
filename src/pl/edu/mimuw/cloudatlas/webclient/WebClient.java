@@ -19,6 +19,10 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -44,16 +48,18 @@ public class WebClient {
 	private final CloudAtlasInterface zmiRmi;
 	private final SignerInterface signerRmi;
 	private final HistoricalDataStorage dataStorage;
-	private int httpPort = 8000;
+	private final int httpPort;
+	private final JSONObject config;
 	
-	public WebClient(HistoricalDataStorage dataStorage, CloudAtlasInterface zmiRmi, SignerInterface signerRmi, JSONObject config) {
+	public WebClient(HistoricalDataStorage dataStorage, JSONObject config) throws RemoteException, NotBoundException {
 		this.dataStorage = dataStorage;
-		this.zmiRmi = zmiRmi;
-		this.signerRmi = signerRmi;
-		if (config != null && config.has("httpPort"))
-			httpPort = config.getInt("httpPort");
-		else 
-			System.out.println("Info: Using default port " + httpPort);
+		this.config = config;
+		this.httpPort = config.getInt("httpPort");
+		
+		Registry agentRegistry = LocateRegistry.getRegistry(config.getString("agentRegistryHost"));
+		this.zmiRmi = (CloudAtlasInterface) agentRegistry.lookup("CloudAtlas" + config.getString("name"));
+		Registry signerRegistry = LocateRegistry.getRegistry(config.getString("signerRegistryHost"));
+		this.signerRmi = (SignerInterface) signerRegistry.lookup("CloudAtlasSigner");
 	}
 	
 	public void run() throws IOException {

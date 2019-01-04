@@ -10,13 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.time.Duration;
 import org.json.JSONObject;
-import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
-import pl.edu.mimuw.cloudatlas.agent.ConfigUtils;
-import pl.edu.mimuw.cloudatlas.signer.SignerInterface;
 
 
 /**
@@ -24,9 +18,11 @@ import pl.edu.mimuw.cloudatlas.signer.SignerInterface;
  * @author mrowqa
  */
 public class Main {
-	private static String zoneName = "/uw/khaki13";
-	private static Duration sleepDuration = Duration.ofSeconds(5);
-	private static Duration dataHistoryLimit = null;
+	private final static String DEFAULT_REGISTRY_HOST = "localhost"; // for both agent & signer
+	private final static String DEFAULT_DATA_HISTORY_LIMIT = null; // can be also a string with an interval
+	private final static String DEFAULT_DATA_DOWNLOAD_INTERVAL = "5s";
+	private final static String DEFAULT_ZONE_NAME = "/uw/khaki13";
+	private final static int DEFAULT_HTTP_PORT = 8000;
 	private static JSONObject config = null;
 
 	/**
@@ -42,18 +38,16 @@ public class Main {
 			System.err.println("Exception parsing command args: " + ex.getMessage());
 			System.exit(1);
 		}
-		Registry registry = LocateRegistry.getRegistry("localhost");
-		CloudAtlasInterface stubZmi = (CloudAtlasInterface) registry.lookup("CloudAtlas" + zoneName);
-		SignerInterface stubSigner = (SignerInterface) registry.lookup("CloudAtlasSigner");
 
-		HistoricalDataStorage storage = new HistoricalDataStorage(stubZmi, sleepDuration, dataHistoryLimit);
-		WebClient wcl = new WebClient(storage, stubZmi, stubSigner, config);
+		HistoricalDataStorage storage = new HistoricalDataStorage(config);
+		WebClient wcl = new WebClient(storage, config);
 		storage.start();
 		wcl.run();
 	}
 
 	private static void parseCmdArgs(String[] args) {
 		if (args.length == 0) {
+			fillInDefaultConfigValues();
 			return;
 		}
 
@@ -68,22 +62,57 @@ public class Main {
 			return;
 		}
 		
-		if (args.length != 2 || !args[0].equals("--sleep")) {
+		if (args.length != 4 || !args[0].equals("--agent-host") || !args[2].equals("--zone")) {
 			System.err.println("Usage: <me> --config-file /path/to/config/file.conf");
-			System.err.println("or   : <me> --sleep <num>(h|m|s)");
+			System.err.println("or   : <me> --agent-host <host> --zone /my/leaf/zone");
 			System.exit(1);
 		}
 
-		sleepDuration = ConfigUtils.parseInterval(args[1]);
+		fillInDefaultConfigValues();
+		config.put("agentRegistryHost", args[1]);
+		config.put("name", args[3]);
 	}
 
 	private static void parseConfigFile(String file) throws IOException {
 		String content = new String(Files.readAllBytes(Paths.get(file)));
 		JSONObject obj = new JSONObject(content);
+		String zoneName = null;
 		if (obj.has("name"))
 			zoneName = obj.getString("name");
-		if (!obj.has("webclient"))
-			return;
-		config = obj.getJSONObject("webclient");
+		if (obj.has("webclient"))
+			config = obj.getJSONObject("webclient");
+		fillInDefaultConfigValues();
+		if (zoneName != null)
+			config.put("name", zoneName);
+	}
+	
+	private static void fillInDefaultConfigValues() {
+		if (config == null) {
+			config = new JSONObject();
+		}
+		
+		if (!config.has("name")) {
+			config.put("name", DEFAULT_ZONE_NAME);
+		}
+		
+		if (!config.has("agentRegistryHost")) {
+			config.put("agentRegistryHost", DEFAULT_REGISTRY_HOST);
+		}
+		
+		if (!config.has("signerRegistryHost")) {
+			config.put("signerRegistryHost", DEFAULT_REGISTRY_HOST);
+		}
+		
+		if (!config.has("dataHistoryLimit")) {
+			config.put("dataHistoryLimit", DEFAULT_DATA_HISTORY_LIMIT);
+		}
+		
+		if (!config.has("dataDownloadInterval")) {
+			config.put("dataDownloadInterval", DEFAULT_DATA_DOWNLOAD_INTERVAL);
+		}
+		
+		if (!config.has("httpPort")) {
+			config.put("httpPort", DEFAULT_HTTP_PORT);
+		}
 	}
 }
