@@ -309,6 +309,11 @@ public class ZMIModule extends Thread implements Module {
 			}
 		}
 	}
+	
+	public static Set<String> extractAttributesCreatedByQuery(String query) throws Exception {
+		Program program = tryParse(query);
+		return AttributesExtractor.extractAttributes(program);
+	}
 
 	private static Program tryParse(String query) throws Exception {
 		Yylex lex = new Yylex(new ByteArrayInputStream(query.getBytes()));

@@ -22,6 +22,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
+import java.util.Set;
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import pl.edu.mimuw.cloudatlas.agent.ZMIModule;
@@ -44,6 +45,7 @@ public class Signer implements SignerInterface {
 	private final Cipher signCipher;
 	
 	private final HashSet<String> signedQueriesNames = new HashSet<>();
+	private final HashSet<String> signedAttributesCreatedByQuery = new HashSet<>(); // SELECT 42 AS xd; <-- "xd" is the attribute here
 	
 	
 	public Signer(Mode mode, String keyFilename) throws NoSuchAlgorithmException, InvalidKeySpecException, IOException, NoSuchPaddingException {
@@ -69,6 +71,7 @@ public class Signer implements SignerInterface {
 	public synchronized String signQueryOperation(QueryOperation query) throws RemoteException {
 		assert privKey != null;
 		
+		Set<String> attributes = null;
 		if (query.getOperation() == QueryOperation.Operation.QUERY_INSTALL) {
 			if (signedQueriesNames.contains(query.getName())) {
 				// because of nature of distributed systems, even if a query has been uninstalled,
@@ -79,6 +82,19 @@ public class Signer implements SignerInterface {
 			String errorMsg = ZMIModule.validateQuery(query.getName(), query.getText());
 			if (errorMsg != null) {
 				throw new RemoteException("Invalid query: " + errorMsg);
+			}
+			
+			try {
+				attributes = ZMIModule.extractAttributesCreatedByQuery(query.getText());
+			}
+			catch (Exception ex) {
+				throw new RemoteException("Interpreter error", ex);
+			}
+			for (String attribute : attributes) {
+				if (signedAttributesCreatedByQuery.contains(attribute)) {
+					throw new RemoteException("Query tries to overwrite attribute \"" +
+							attribute + "\" which is created by other already signed query.");
+				}
 			}
 		}
 		else {
@@ -92,7 +108,10 @@ public class Signer implements SignerInterface {
 			byte[] digest = digestGenerator.digest(serialized);
 			signCipher.init(Cipher.ENCRYPT_MODE, privKey);
 			byte[] signature = signCipher.doFinal(digest);
-			signedQueriesNames.add(query.getName());
+			if (query.getOperation() == QueryOperation.Operation.QUERY_INSTALL) {
+				signedQueriesNames.add(query.getName());
+				signedAttributesCreatedByQuery.addAll(attributes);
+			}
 			return Base64.getEncoder().encodeToString(signature);
 		}
 		catch (Exception ex) {
