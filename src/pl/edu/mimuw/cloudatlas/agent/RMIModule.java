@@ -21,6 +21,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
+import pl.edu.mimuw.cloudatlas.rmiutils.RmiCallException;
 
 /**
  *
@@ -120,18 +121,18 @@ public class RMIModule implements CloudAtlasInterface, Module {
 		checkElementType((TypeCollection) queries.getType(), Type.PrimaryType.STRING);
 		checkElementType((TypeCollection) signatures.getType(), Type.PrimaryType.STRING);
 		if (queryNames.size() != queries.size() || queries.size() != signatures.size()) {
-			throw new RemoteException("QueryNames, queries and signatures must have equal size " + queryNames.size() + " vs " + queries.size() + " vs " + signatures.size());
+			throw new RmiCallException("QueryNames, queries and signatures must have equal size " + queryNames.size() + " vs " + queries.size() + " vs " + signatures.size());
 		}
 		if (queryNames.size() != 1) {
-			throw new RemoteException("You can install only one query at once.");
+			throw new RmiCallException("You can install only one query at once.");
 		}
 		String nameRaw = ((ValueString)queryNames.get(0)).getValue();
 		if (!Attribute.isQuery(new Attribute(nameRaw))) {
-			throw new RemoteException("Invalid query name " + nameRaw + " should be proceed with &");
+			throw new RmiCallException("Invalid query name " + nameRaw + " should be proceed with &");
 		}
 		String queryRaw = ((ValueString)queryNames.get(0)).getValue();
 		if (queryRaw.isEmpty()) {
-			throw new RemoteException("Query can't be empty.");
+			throw new RmiCallException("Query can't be empty.");
 		}
 		
 		ZMIMessage request = ZMIMessage.installQuery(pid, queryNames.get(0), queries.get(0), signatures.get(0));
@@ -144,14 +145,14 @@ public class RMIModule implements CloudAtlasInterface, Module {
 		checkElementType((TypeCollection) queryNames.getType(), Type.PrimaryType.STRING);
 		checkElementType((TypeCollection) signatures.getType(), Type.PrimaryType.STRING);
 		if (queryNames.size() != signatures.size()) {
-			throw new RemoteException("QueryNames and signatures must have equal size " + queryNames.size() + " vs " + signatures.size());
+			throw new RmiCallException("QueryNames and signatures must have equal size " + queryNames.size() + " vs " + signatures.size());
 		}
 		if (queryNames.size() != 1) {
-			throw new RemoteException("You can uninstall only one query at once.");
+			throw new RmiCallException("You can uninstall only one query at once.");
 		}
 		String nameRaw = ((ValueString)queryNames.get(0)).getValue();
 		if (!Attribute.isQuery(new Attribute(nameRaw))) {
-			throw new RemoteException("Invalid query name " + nameRaw + " should be proceed with &");
+			throw new RmiCallException("Invalid query name " + nameRaw + " should be proceed with &");
 		}
 		
 		ZMIMessage request = ZMIMessage.uninstallQuery(pid, queryNames.get(0), signatures.get(0));
@@ -202,10 +203,10 @@ public class RMIModule implements CloudAtlasInterface, Module {
 			modulesHandler.enqueue(request);
 			response = messages.waitAndPop(request.pid);
 			if (response.type == RMIMessage.Type.ERROR) {
-				throw new RemoteException(response.errorMessage);
+				throw new RmiCallException(response.errorMessage);
 			}
 		} catch (InterruptedException ex) {
-			throw new RemoteException("Exception occured while fetching the response " + ex.getMessage());
+			throw new RmiCallException("Exception occured while fetching the response " + ex.getMessage());
 		}
 		return response;
 	}

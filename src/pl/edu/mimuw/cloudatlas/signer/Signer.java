@@ -26,6 +26,7 @@ import java.util.Set;
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import pl.edu.mimuw.cloudatlas.agent.ZMIModule;
+import pl.edu.mimuw.cloudatlas.rmiutils.RmiCallException;
 
 /**
  *
@@ -77,29 +78,29 @@ public class Signer implements SignerInterface {
 				// because of nature of distributed systems, even if a query has been uninstalled,
 				// we can't be sure it is not installed somewhere, so it's safer to allow
 				// sign query with given name just once
-				throw new RemoteException("Query installation with this name has been already signed");
+				throw new RmiCallException("Query installation with this name has been already signed");
 			}
 			String errorMsg = ZMIModule.validateQuery(query.getName(), query.getText());
 			if (errorMsg != null) {
-				throw new RemoteException("Invalid query: " + errorMsg);
+				throw new RmiCallException("Invalid query: " + errorMsg);
 			}
 			
 			try {
 				attributes = ZMIModule.extractAttributesCreatedByQuery(query.getText());
 			}
 			catch (Exception ex) {
-				throw new RemoteException("Interpreter error", ex);
+				throw new RmiCallException("Interpreter error", ex);
 			}
 			for (String attribute : attributes) {
 				if (signedAttributesCreatedByQuery.contains(attribute)) {
-					throw new RemoteException("Query tries to overwrite attribute \"" +
+					throw new RmiCallException("Query tries to overwrite attribute \"" +
 							attribute + "\" which is created by other already signed query.");
 				}
 			}
 		}
 		else {
 			if (!signedQueriesNames.contains(query.getName())) {
-				throw new RemoteException("Only installed queries can be uninstalled");
+				throw new RmiCallException("Only installed queries can be uninstalled");
 			}
 		}
 		
@@ -116,7 +117,7 @@ public class Signer implements SignerInterface {
 		}
 		catch (Exception ex) {
 			// for security reasons, we don't want to expose the occurred exception
-			throw new RemoteException("Query signing failed.", ex);
+			throw new RmiCallException("Query signing failed.", ex);
 		}
 	}
 	
@@ -133,7 +134,7 @@ public class Signer implements SignerInterface {
 		}
 		catch (Exception ex) {
 			// for security reasons, we don't want to expose the occurred exception
-			throw new RemoteException("Query signature validation failed.");
+			throw new RmiCallException("Query signature validation failed.");
 		}
 	}
 

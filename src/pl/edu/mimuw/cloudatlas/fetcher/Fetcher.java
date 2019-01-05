@@ -9,6 +9,7 @@ import com.sun.management.OperatingSystemMXBean;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.time.Duration;
 import java.util.NoSuchElementException;
@@ -23,6 +24,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueDouble;
 import pl.edu.mimuw.cloudatlas.model.ValueInt;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
+import pl.edu.mimuw.cloudatlas.rmiutils.RmiWithAutoRecovery;
 
 /**
  *
@@ -30,12 +32,12 @@ import pl.edu.mimuw.cloudatlas.model.ValueString;
  */
 public class Fetcher extends Thread {
 	private final Duration updateInterval;
-	private final CloudAtlasInterface rmi;
+	private final RmiWithAutoRecovery<CloudAtlasInterface> rmiWrapper;
 	private final ValueString zone;
 
-	public Fetcher(Duration updateInterval, CloudAtlasInterface rmi, String zone) {
+	public Fetcher(Duration updateInterval, String registryHost, String zone) throws RemoteException, NotBoundException {
 		this.updateInterval = Duration.ofMillis(updateInterval.toMillis()); // clone
-		this.rmi = rmi;
+		this.rmiWrapper = new RmiWithAutoRecovery<>(registryHost, "CloudAtlas" + zone);
 		this.zone = new ValueString(zone);
 	}
 
@@ -44,7 +46,10 @@ public class Fetcher extends Thread {
 		while (true) {
 			AttributesMap data = collectData();
 			try {
-				rmi.setZoneAttributes(zone, data);
+				rmiWrapper.callWithAutoRecovery(rmi -> {
+					rmi.setZoneAttributes(zone, data);
+					return null;
+				});
 				Logger.getLogger(Fetcher.class.getName()).log(Level.FINEST, "Data collected & set.");
 			}
 			catch (RemoteException ex) {

@@ -44,6 +44,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ValueTime;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
+import pl.edu.mimuw.cloudatlas.rmiutils.RmiCallException;
 import pl.edu.mimuw.cloudatlas.signer.QueryOperation;
 import pl.edu.mimuw.cloudatlas.signer.Signer;
 
@@ -217,16 +218,16 @@ public class ZMIModule extends Thread implements Module {
 		String queryRaw = ((ValueString)query.getVal()).getValue();
 		String errorMsg = validateQuery(name, queryRaw);
 		if (errorMsg != null) {
-			throw new RemoteException(errorMsg);
+			throw new RmiCallException(errorMsg);
 		}
 
 		QueryOperation queryOp = QueryOperation.newQueryInstall(name, queryRaw);
 		if (!signVerifier.verifyQueryOperationSignature(queryOp, signature)) {
-			throw new RemoteException("SecurityError: Invalid signatures for queries.");
+			throw new RmiCallException("SecurityError: Invalid signatures for queries.");
 		}
 		Attribute attribute = new Attribute(name);
 		if (queries.getOrDefault(attribute, null) != null) {
-			throw new RemoteException("Query was already installed");
+			throw new RmiCallException("Query was already installed");
 		}
 
 		queries.put(attribute, query);
@@ -252,11 +253,11 @@ public class ZMIModule extends Thread implements Module {
 
 		QueryOperation queryOp = QueryOperation.newQueryUninstall(name);
 		if (!signVerifier.verifyQueryOperationSignature(queryOp, signature)) {
-			throw new RemoteException("SecurityError: Invalid signatures for queries.");
+			throw new RmiCallException("SecurityError: Invalid signatures for queries.");
 		}
 
 		if (!queryInstalled(attribute)) {
-			throw new RemoteException("Query not installed.");
+			throw new RmiCallException("Query not installed.");
 		}
 		removeQuery(attribute, freshness);
 	}
@@ -323,7 +324,7 @@ public class ZMIModule extends Thread implements Module {
 	private static ZMI findZoneOrError(ZMI zmi, String name) throws RemoteException {
 		zmi = findZone(zmi, name);
 		if (zmi == null) {
-			throw new RemoteException("Zone not found.");
+			throw new RmiCallException("Zone not found.");
 		}
 		return zmi;
 	}

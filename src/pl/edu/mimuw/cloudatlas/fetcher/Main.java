@@ -24,6 +24,7 @@ import pl.edu.mimuw.cloudatlas.agent.ConfigUtils;
  * @author mrowqa
  */
 public class Main {
+	public final static String RMI_HOST = "localhost";
 	private static Duration sleepDuration = Duration.ofSeconds(5);
 	private static String targetZone = "/uw/violet07";
 
@@ -40,10 +41,8 @@ public class Main {
 			System.err.println("Exception parsing command args: " + ex.getMessage());
 			System.exit(1);
 		}
-		Registry registry = LocateRegistry.getRegistry("localhost");
-		CloudAtlasInterface stub = (CloudAtlasInterface) registry.lookup("CloudAtlas" + targetZone);
 		
-		Fetcher f = new Fetcher(sleepDuration, stub, targetZone);
+		Fetcher f = new Fetcher(sleepDuration, RMI_HOST, targetZone);
 		f.run(); // it is just fine, no need for f.start()
 	}
 

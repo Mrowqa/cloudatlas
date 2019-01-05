@@ -22,13 +22,14 @@ import pl.edu.mimuw.cloudatlas.agent.ConfigUtils;
 import pl.edu.mimuw.cloudatlas.fetcher.Fetcher;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
+import pl.edu.mimuw.cloudatlas.rmiutils.RmiWithAutoRecovery;
 
 /**
  *
  * @author mrowqa
  */
 public class HistoricalDataStorage extends Thread {
-	private final CloudAtlasInterface rmi;
+	private final RmiWithAutoRecovery<CloudAtlasInterface> zmiRmi;
 	private final Duration sleepDuration;
 	private final Duration storageLimit;
 	private final List<DataEntry> entries = new ArrayList<>();
@@ -47,8 +48,9 @@ public class HistoricalDataStorage extends Thread {
 	public HistoricalDataStorage(JSONObject config) throws RemoteException, NotBoundException {
 		this.config = config;
 		
-		Registry registry = LocateRegistry.getRegistry(config.getString("agentRegistryHost"));
-		this.rmi = (CloudAtlasInterface) registry.lookup("CloudAtlas" + config.getString("name"));
+		this.zmiRmi = new RmiWithAutoRecovery<>(
+				config.getString("agentRegistryHost"),
+				"CloudAtlas" + config.getString("name"));
 		this.sleepDuration = ConfigUtils.parseInterval(config.getString("dataDownloadInterval"));
 		if (config.has("dataHistoryLimit")) {
 			Object historyLimit = config.get("dataHistoryLimit");
@@ -63,7 +65,7 @@ public class HistoricalDataStorage extends Thread {
 	public void run() {
 		while (true) {
 			try {
-				ZMI zmi = rmi.getWholeZMI();
+				ZMI zmi = zmiRmi.callWithAutoRecovery(rmi -> rmi.getWholeZMI());
 				addNewEntry(new DataEntry(ZMIJSONSerializer.ZMIToJSON(zmi)));
 				Logger.getLogger(Fetcher.class.getName()).log(Level.FINEST, "Added new data entry.");
 			}

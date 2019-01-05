@@ -21,8 +21,6 @@ import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -30,13 +28,16 @@ import java.util.Map;
 import java.util.Scanner;
 import org.json.JSONObject;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
+import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
+import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
+import pl.edu.mimuw.cloudatlas.rmiutils.RmiWithAutoRecovery;
 import pl.edu.mimuw.cloudatlas.signer.QueryOperation;
 import pl.edu.mimuw.cloudatlas.signer.SignerInterface;
 
@@ -45,8 +46,8 @@ import pl.edu.mimuw.cloudatlas.signer.SignerInterface;
  * @author mrowqa
  */
 public class WebClient {
-	private final CloudAtlasInterface zmiRmi;
-	private final SignerInterface signerRmi;
+	private final RmiWithAutoRecovery<CloudAtlasInterface> zmiRmi;
+	private final RmiWithAutoRecovery<SignerInterface> signerRmi;
 	private final HistoricalDataStorage dataStorage;
 	private final int httpPort;
 	private final JSONObject config;
@@ -56,10 +57,12 @@ public class WebClient {
 		this.config = config;
 		this.httpPort = config.getInt("httpPort");
 		
-		Registry agentRegistry = LocateRegistry.getRegistry(config.getString("agentRegistryHost"));
-		this.zmiRmi = (CloudAtlasInterface) agentRegistry.lookup("CloudAtlas" + config.getString("name"));
-		Registry signerRegistry = LocateRegistry.getRegistry(config.getString("signerRegistryHost"));
-		this.signerRmi = (SignerInterface) signerRegistry.lookup("CloudAtlasSigner");
+		this.zmiRmi = new RmiWithAutoRecovery<>(
+				config.getString("agentRegistryHost"),
+				"CloudAtlas" + config.getString("name"));
+		this.signerRmi = new RmiWithAutoRecovery<>(
+				config.getString("signerRegistryHost"),
+				"CloudAtlasSigner");
 	}
 	
 	public void run() throws IOException {
@@ -126,7 +129,8 @@ public class WebClient {
 			String rmiResult;
 			int statusCode = 200;
 			try {
-				rmiResult = ZMIJSONSerializer.valueToJSONString(zmiRmi.getZones());
+				ValueList zones = zmiRmi.callWithAutoRecovery(rmi -> rmi.getZones());
+				rmiResult = ZMIJSONSerializer.valueToJSONString(zones);
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -150,7 +154,9 @@ public class WebClient {
 			String rmiResult;
 			try {
 				ValueString zoneName = new ValueString(params.get("zone-name"));
-				rmiResult = ZMIJSONSerializer.attributesMapToJSONString(zmiRmi.getZoneAttributes(zoneName));
+				AttributesMap zoneAttributesMap = zmiRmi.callWithAutoRecovery(
+						rmi -> rmi.getZoneAttributes(zoneName));
+				rmiResult = ZMIJSONSerializer.attributesMapToJSONString(zoneAttributesMap);
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -174,7 +180,10 @@ public class WebClient {
 			try {
 				ValueString zoneName = new ValueString(params.get("zone-name"));
 				AttributesMap attrs = ZMIJSONSerializer.JSONStringToAttributesMap(params.get("zone-attrs"));
-				zmiRmi.setZoneAttributes(zoneName, attrs);
+				zmiRmi.callWithAutoRecovery(rmi -> {
+					rmi.setZoneAttributes(zoneName, attrs);
+					return null;
+				});
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -193,7 +202,8 @@ public class WebClient {
 			
 			String rmiResult;
 			try {
-				rmiResult = ZMIJSONSerializer.valueToJSONString(zmiRmi.getFallbackContacts());
+				ValueSet fallbackContacts = zmiRmi.callWithAutoRecovery(rmi -> rmi.getFallbackContacts());
+				rmiResult = ZMIJSONSerializer.valueToJSONString(fallbackContacts);
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -215,8 +225,11 @@ public class WebClient {
 			
 			String rmiResult = "OK";
 			try {
-				ValueSet contacts = (ValueSet) ZMIJSONSerializer.JSONStringToValue(params.get("contacts"));
-				zmiRmi.setFallbackContacts(contacts);
+				ValueSet contacts = (ValueSet) ZMIJSONSerializer.JSONStringToValue(params.get("contacts"));				
+				zmiRmi.callWithAutoRecovery(rmi -> {
+					rmi.setFallbackContacts(contacts);
+					return null;
+				});
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -241,7 +254,7 @@ public class WebClient {
 			String rmiResult = "OK";
 			try {
 				QueryOperation queryOp = QueryOperation.newQueryInstall(queryName, queryText);
-				String signature = signerRmi.signQueryOperation(queryOp);
+				String signature = signerRmi.callWithAutoRecovery(rmi -> rmi.signQueryOperation(queryOp));
 
 				List<Value> queryNamesRawList = Arrays.asList(new Value[] { new ValueString(queryName) });
 				ValueList queryNames = new ValueList(queryNamesRawList, TypePrimitive.STRING);
@@ -250,7 +263,10 @@ public class WebClient {
 				List<Value> signaturesRawList = Arrays.asList(new Value[] { new ValueString(signature) });
 				ValueList signatures = new ValueList(signaturesRawList, TypePrimitive.STRING);
 
-				zmiRmi.installQueries(queryNames, queries, signatures);
+				zmiRmi.callWithAutoRecovery(rmi -> {
+					rmi.installQueries(queryNames, queries, signatures);
+					return null;
+				});
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -275,14 +291,17 @@ public class WebClient {
 			String rmiResult = "OK";
 			try {
 				QueryOperation queryOp = QueryOperation.newQueryUninstall(queryName);
-				String signature = signerRmi.signQueryOperation(queryOp);
+				String signature = signerRmi.callWithAutoRecovery(rmi -> rmi.signQueryOperation(queryOp));
 
 				List<Value> queryNamesRawList = Arrays.asList(new Value[] { new ValueString(queryName) });
 				ValueList queryNames = new ValueList(queryNamesRawList, TypePrimitive.STRING);
 				List<Value> signaturesRawList = Arrays.asList(new Value[] { new ValueString(signature) });
 				ValueList signatures = new ValueList(signaturesRawList, TypePrimitive.STRING);
 
-				zmiRmi.uninstallQueries(queryNames, signatures);
+				zmiRmi.callWithAutoRecovery(rmi -> {
+					rmi.uninstallQueries(queryNames, signatures);
+					return null;
+				});
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -302,7 +321,9 @@ public class WebClient {
 			
 			String rmiResult;
 			try {
-				rmiResult = ZMIJSONSerializer.allQueriesToJSONString(zmiRmi.getAllQueries());
+				HashMap<Attribute, ValueAndFreshness> allQueries =
+						zmiRmi.callWithAutoRecovery(rmi -> rmi.getAllQueries());
+				rmiResult = ZMIJSONSerializer.allQueriesToJSONString(allQueries);
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
