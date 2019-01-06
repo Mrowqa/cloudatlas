@@ -117,7 +117,7 @@ public class ZMIModule extends Thread implements Module {
 		this.name = name;
 		this.fallbackContacts = ValueAndFreshness.freshValue(fallbackContacts);
 		try {
-			this.signVerifier = new Signer(Signer.Mode.SIGN_VERIFIER, pubKeyFilename);
+			this.signVerifier = new Signer(Signer.Mode.SIGN_VERIFIER, pubKeyFilename, null);
 		}
 		catch (Exception ex) {
 			throw new RuntimeException(ex);

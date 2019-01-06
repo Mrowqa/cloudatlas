@@ -9,7 +9,13 @@ rundir=$1
 policyfile=${rundir}/all.policy
 
 cat >${policyfile} <<EOL
-grant codeBase "file:${rundir}" {
+grant codeBase "file:${rundir}" { // for rmi
+  permission java.security.AllPermission;
+};
+
+grant { // for db
   permission java.security.AllPermission;
 };
 EOL
+
+
