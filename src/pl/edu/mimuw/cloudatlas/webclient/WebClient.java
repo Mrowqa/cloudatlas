@@ -30,9 +30,9 @@ import org.json.JSONObject;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
+import pl.edu.mimuw.cloudatlas.model.Query;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
-import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
@@ -321,7 +321,7 @@ public class WebClient {
 			
 			String rmiResult;
 			try {
-				HashMap<Attribute, ValueAndFreshness> allQueries =
+				HashMap<Attribute, Query> allQueries =
 						zmiRmi.callWithAutoRecovery(rmi -> rmi.getAllQueries());
 				rmiResult = ZMIJSONSerializer.allQueriesToJSONString(allQueries);
 			}

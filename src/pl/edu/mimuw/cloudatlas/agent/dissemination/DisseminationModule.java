@@ -59,7 +59,7 @@ public class DisseminationModule extends Thread implements Module {
 	@Override
 	public void setModulesHandler(ModulesHandler handler) {
 		this.handler = handler;
-		config.setHandler(handler);
+		config.handler = handler;
 	}
 
 	@Override

@@ -9,10 +9,7 @@ package pl.edu.mimuw.cloudatlas.agent.dissemination;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Queue;
 import pl.edu.mimuw.cloudatlas.model.PathName;
-import pl.edu.mimuw.cloudatlas.model.ValueSet;
 
 /**
  *
@@ -31,20 +28,16 @@ public class RoundRobinExponentialNodeSelector extends RoundRobinNodeSelector {
 		this.multiplier = multiplier;
 		this.levels = new ArrayDeque<>();
 		
-		ArrayList<Integer> elements = new ArrayList<>();
+		ArrayList<Level> elements = new ArrayList<>();
 		int count = 1;
 		int maxLevel = name.getComponents().size() - 1;
 		for (int i = maxLevel; i >= 0; i--) {
-			for (int j = 0; j < count; j++) {
-				elements.add(i);
-			}
+			elements.add(new Level(i, count));
 			count = count * multiplier;
 		}
 		
 		Collections.reverse(elements);
-		for (int element : elements) {
-			System.out.println("Element " + element);
+		for (Level element : elements)
 			levels.add(element);
-		}
 	}
 }

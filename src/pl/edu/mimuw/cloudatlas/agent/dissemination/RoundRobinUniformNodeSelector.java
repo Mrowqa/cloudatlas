@@ -17,8 +17,7 @@ public class RoundRobinUniformNodeSelector extends RoundRobinNodeSelector {
 	public RoundRobinUniformNodeSelector(PathName name) {
 		super(name);
 		this.levels = new ArrayDeque<>();
-		for (int i = 0; i < name.getComponents().size(); i++) {
-			levels.add(i);
-		}
+		for (int i = 0; i < name.getComponents().size(); i++)
+			levels.add(new Level(i, 1));
 	}
 }

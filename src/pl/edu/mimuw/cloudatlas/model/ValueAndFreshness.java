@@ -14,11 +14,11 @@ import java.time.Duration;
  * @author pawel
  */
 public class ValueAndFreshness implements Serializable {
-	private Value val;
+	private Value value;
 	private ValueTime freshness;
 	
-	public Value getVal() {
-		return val;
+	public Value getValue() {
+		return value;
 	}
 
 	public ValueTime getFreshness() {
@@ -26,7 +26,7 @@ public class ValueAndFreshness implements Serializable {
 	}
 
 	public ValueAndFreshness(Value val, ValueTime freshness) {
-		this.val = val;
+		this.value = val;
 		this.freshness = freshness;
 	}
 	
@@ -34,14 +34,14 @@ public class ValueAndFreshness implements Serializable {
 		return new ValueAndFreshness(val, ValueTime.now());
 	}
 	
-	public void adjustTime(Duration time) {
-		this.freshness = freshness.adjustTime(time);
+	public ValueAndFreshness adjustTime(Duration time) {
+		return new ValueAndFreshness(value, freshness.adjustTime(time));
 	}
 	
-	public void update(ValueAndFreshness valAndTs) {
+	public ValueAndFreshness getFresher(ValueAndFreshness valAndTs) {
 		if (freshness.isLowerThan(valAndTs.freshness).getValue()) {
-			val = valAndTs.val;
-			freshness = valAndTs.freshness;
+			return valAndTs;
 		}
+		return this;
 	}
 }

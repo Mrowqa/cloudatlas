@@ -176,9 +176,9 @@ public class ZMIHierarchyBuilder {
 		ValueContact violet07Contact = createContact("/uw/violet07", (byte)1, (byte)1, (byte)1, (byte)10);
 		ValueContact khaki13Contact = createContact("/uw/khaki13", (byte)2, (byte)1, (byte)1, (byte)38);
 		ValueContact khaki31Contact = createContact("/uw/khaki31", (byte)3, (byte)1, (byte)1, (byte)39);
-		ValueContact whatever01Contact = createContact("/uw/whatever01", (byte)4, (byte)1, (byte)1, (byte)1);
-		ValueContact whatever02Contact = createContact("/uw/whatever02", (byte)5, (byte)1, (byte)1, (byte)1);		
-		
+		ValueContact whatever01Contact = createContact("/pjwstk/whatever01", (byte)4, (byte)1, (byte)1, (byte)1);
+		ValueContact whatever02Contact = createContact("/pjwstk/whatever02", (byte)5, (byte)1, (byte)1, (byte)1);		
+			
 		List<Value> list;
 		
 		ZMI root = new ZMI();
@@ -191,7 +191,7 @@ public class ZMIHierarchyBuilder {
 		uw.getAttributes().add("owner", new ValueString("/uw/violet07"));
 		list = Arrays.asList(new Value[]{violet07Contact});
 		uw.getAttributes().add("contacts", new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT));
-		
+	
 		ZMI pjwstk = new ZMI(root, "pjwstk");
 		root.addSon(pjwstk);
 		list = Arrays.asList(new Value[]{whatever01Contact, whatever02Contact});

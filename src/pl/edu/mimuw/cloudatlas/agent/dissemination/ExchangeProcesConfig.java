@@ -47,8 +47,4 @@ public class ExchangeProcesConfig {
 			result.maxRetry = config.getInt("maxRetry");
 		return result;
 	}
-	
-	public void setHandler(ModulesHandler handler) {
-		this.handler = handler;
-	}
 }

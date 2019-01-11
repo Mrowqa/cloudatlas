@@ -10,8 +10,10 @@ import java.util.HashMap;
 import pl.edu.mimuw.cloudatlas.agent.dissemination.AgentData;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
+import pl.edu.mimuw.cloudatlas.model.Query;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
+import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ValueTime;
 
 /**
@@ -26,6 +28,28 @@ public class ZMIMessage extends ModuleMessage {
 		EXECUTE_QUERIES, REMOVE_OUTDATED_ZONES,
 		GET_LOCAL_AGENT_DATA, UPDATE_WITH_REMOTE_DATA,
 	}
+	
+	static ZMIMessage getZmi(long pid) {
+		return new ZMIMessage(pid, Type.GET_ZMI);
+	}
+	
+	static ZMIMessage getZones(long pid) {
+		return new ZMIMessage(pid, Type.GET_ZONES);
+	}
+	
+	static ZMIMessage getZoneAttributes(long pid, ValueString zone) {
+		ZMIMessage ret = new ZMIMessage(pid, Type.GET_ZONE_ATTRIBUTES);
+		ret.value1 = zone;
+		return ret;
+	}
+	
+	static ZMIMessage getFallbackContacts(long pid) {
+		return new ZMIMessage(pid, Type.GET_FALLBACK_CONTACTS);
+	}
+
+	static ZMIMessage executeQueries() {
+		return new ZMIMessage(Type.EXECUTE_QUERIES);
+	}
 
 	public static ZMIMessage getLocalAgentData(long pid) {
 		return new ZMIMessage(pid, Type.GET_LOCAL_AGENT_DATA);
@@ -37,19 +61,17 @@ public class ZMIMessage extends ModuleMessage {
 		return ret;
 	}
 	
-	public static ZMIMessage installQuery(long pid, Value name, Value query, Value signature) {
+	public static ZMIMessage installQuery(long pid, Value name, String query, String signature) {
 		ZMIMessage ret = new ZMIMessage(pid, Type.INSTALL_QUERIES);
 		ret.value1 = name;
-		ret.value2 = signature;
-		ret.valueAndFreshness = ValueAndFreshness.freshValue(query);
+		ret.query = new Query(query, signature);
 		return ret;
 	}
 	
-	public static ZMIMessage uninstallQuery(long pid, Value name, Value signature) {
+	public static ZMIMessage uninstallQuery(long pid, Value name, String signature) {
 		ZMIMessage ret = new ZMIMessage(pid, Type.UNINSTALL_QUERIES);
 		ret.value1 = name;
-		ret.value2 = ValueTime.now();
-		ret.value3 = signature;
+		ret.query = new Query("", signature);
 		return ret;
 	}
 	
@@ -76,43 +98,22 @@ public class ZMIMessage extends ModuleMessage {
 		return new ZMIMessage(Type.REMOVE_OUTDATED_ZONES);
 	}
 	
-	public ZMIMessage(Type type) {
+	private ZMIMessage(Type type) {
 		this.type = type;
 	}
 	
-	public ZMIMessage(long pid, Type type) {
+	private ZMIMessage(long pid, Type type) {
 		this(type);
 		this.pid = pid;
-	}
-	
-	public ZMIMessage(long pid, Type type, Value value) {
-		this(pid, type);
-		this.value1 = value;
-	}
-	
-	public ZMIMessage(long pid, Type type, Value value1, Value value2) {
-		this(pid, type, value1);
-		this.value2 = value2;
-	}
-	
-	public ZMIMessage(long pid, Type type, Value value1, Value value2, Value value3) {
-		this(pid, type, value1);
-		this.value2 = value2;
-		this.value3 = value3;
-	}
-
-	public ZMIMessage(long pid, Type type, Value value, AttributesMap attributes) {
-		this(pid, type, value);
-		this.attributes = attributes;
 	}
 	
 	public final Type type;
 	public long pid;
 	public Value value1;
 	public Value value2;
-	public Value value3;
+	public Query query;
 	public ValueAndFreshness valueAndFreshness;
 	public AttributesMap attributes;
 	public AgentData remoteData;
-	public HashMap<Attribute, ValueAndFreshness> queries;
+	public HashMap<Attribute, Query> queries;
 }

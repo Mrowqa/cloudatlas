@@ -9,8 +9,8 @@ package pl.edu.mimuw.cloudatlas.agent;
 import java.util.HashMap;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
+import pl.edu.mimuw.cloudatlas.model.Query;
 import pl.edu.mimuw.cloudatlas.model.Value;
-import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 
 /**
@@ -39,5 +39,5 @@ public class RMIMessage extends ModuleMessage {
 	public ZMI zmi;
 	public AttributesMap attributes;
 	public Value value1;
-	public HashMap<Attribute, ValueAndFreshness> queries;
+	public HashMap<Attribute, Query> queries;
 }

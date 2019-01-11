@@ -16,8 +16,35 @@ import pl.edu.mimuw.cloudatlas.model.ValueSet;
  * @author pawel
  */
 public abstract class RoundRobinNodeSelector extends NodeSelector {
-	protected Queue<Integer> levels;
-
+	protected class Level {
+		private final int level;
+		private final int timesInitial;
+		private int timesLeft;
+		
+		public Level(int level, int timesInitial) {
+			this.level = level;
+			this.timesInitial = timesInitial;
+			this.timesLeft = timesInitial;
+		}
+		
+		public int getLevel() {
+			return level;
+		}
+		
+		public int getTimesLeft() {
+			return timesLeft;
+		}
+		
+		public void decreaseTimesLeft() {
+			timesLeft--;
+		}
+		
+		public void reset() {
+			timesLeft = timesInitial;
+		}
+	}
+	protected Queue<Level> levels;
+	
 	public RoundRobinNodeSelector(PathName name) {
 		super(name);
 	}
@@ -25,10 +52,18 @@ public abstract class RoundRobinNodeSelector extends NodeSelector {
 	@Override
 	public int selectLevel(LinkedList<LinkedList<ValueSet>> nodesContacts) {
 		while(true) {
-			int level = levels.poll();
-			levels.add(level);
-			if (!nodesContacts.get(level).isEmpty())
-				return level;
+			Level level = levels.peek();
+			level.decreaseTimesLeft();
+			boolean isLevelEmpty = nodesContacts.get(level.getLevel()).isEmpty();
+			
+			if (level.getTimesLeft() <= 0 || isLevelEmpty) {
+				levels.poll();
+				level.reset();
+				levels.add(level);
+			}
+			
+			if (!isLevelEmpty)
+				return level.getLevel();
 		}
 	}
 }

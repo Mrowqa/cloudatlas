@@ -5,7 +5,11 @@
  */
 package sr_labs;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.rmi.RemoteException;
@@ -54,9 +58,9 @@ public class Sr_labs {
 	/**
 	 * @param args the command line arguments
 	 */
-	public static void main(String[] args) throws ParseException, UnknownHostException, IOException {
-		testZMIModuleUtilFunctions();
-		//testNodeSelection();
+	public static void main(String[] args) throws ParseException, UnknownHostException, IOException, ClassNotFoundException {		
+		//testZMIModuleUtilFunctions();
+		testNodeSelection();
 		//testSerialize();
 		//testSerializeJSON();
 		//testCloudAtlasAgent();
@@ -86,8 +90,6 @@ public class Sr_labs {
 		list.add(new ValueBoolean(false));
 		list.add(new ValueBoolean(null));
 		attrs.add("vList", list);
-
-		root.updateAttributes();
 
 		System.out.println(root.toString());
 		System.out.println(roomB.toString());
@@ -256,13 +258,13 @@ public class Sr_labs {
 		int numRepeats = 100;
 		PathName name = new PathName("/uw/violet07");
 		ValueContact violet07Contact = createContact("/uw/violet07", (byte)1, (byte)1, (byte)1, (byte)10);
-		ValueContact whatever01Contact = ZMIHierarchyBuilder.createContact("/uw/whatever01", (byte)4, (byte)1, (byte)1, (byte)1);
-		ValueContact whatever02Contact = ZMIHierarchyBuilder.createContact("/uw/whatever02", (byte)5, (byte)1, (byte)1, (byte)1);
+		ValueContact whatever01Contact = ZMIHierarchyBuilder.createContact("/pjwstk/whatever01", (byte)4, (byte)1, (byte)1, (byte)1);
+		ValueContact whatever02Contact = ZMIHierarchyBuilder.createContact("/pjwstk/whatever02", (byte)5, (byte)1, (byte)1, (byte)1);
 		List<Value> list = Arrays.asList(new Value[] {whatever01Contact, whatever02Contact, violet07Contact});
 		
 		ValueSet fallback = new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT);
 		ZMI zmi = ZMIHierarchyBuilder.createHierarchyForNodeSelectionTest(); // ZMIHierarchyBuilder.createLeafNodeHierarchy(name); 
-		NodeSelector selector = NodeSelector.createByName("randomExponential", name);
+		NodeSelector selector = NodeSelector.createByName("roundRobinExponential", name);
 		
 		HashMap<String, Integer> nodeCount = new HashMap<>();
 		for (int i = 0; i < numRepeats; i++) {

@@ -264,13 +264,14 @@ public class ZMIJSONSerializer {
 		}
 	}
 	
-	public static String allQueriesToJSONString(HashMap<Attribute, ValueAndFreshness> queries) {
+	public static String allQueriesToJSONString(HashMap<Attribute, Query> queries) {
 		JSONArray arr = new JSONArray();
 		
-		for (Entry<Attribute, ValueAndFreshness> q : queries.entrySet()) {
+		for (Entry<Attribute, Query> q : queries.entrySet()) {
 			JSONObject obj = new JSONObject();
 			obj.put("name", q.getKey().getName());
-			obj.put("text", ((ValueString) q.getValue().getVal()).getValue());
+			obj.put("text", q.getValue().getText());
+			obj.put("signature", q.getValue().getSignature());
 			obj.put("freshness", q.getValue().getFreshness().getValue());
 			arr.put(obj);
 		}

@@ -6,8 +6,6 @@
 
 package pl.edu.mimuw.cloudatlas.agent;
 
-import pl.edu.mimuw.cloudatlas.model.PathName;
-
 
 /**
  *

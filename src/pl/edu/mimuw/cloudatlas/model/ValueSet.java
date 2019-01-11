@@ -124,7 +124,7 @@ public class ValueSet extends ValueSimple<Set<Value>> implements Set<Value>, Ser
 					+ " only. Not compatibile with elements of type: " + element.getType().toString());
 	}
 		
-	public ValueSet random(int size) {
+	public ValueSet randomSubset(int size) {
 		List<Value> list = new ArrayList<>();
 		for (Value v : getValue())
 			list.add(v);

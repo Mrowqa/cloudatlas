@@ -59,7 +59,7 @@ public class Main {
 		
 		if (args.length != 4 || !args[0].equals("--sleep") || !args[2].equals("--zone")) {
 			System.err.println("Usage: <me> --config-file path/to/config/file.conf");
-			System.err.println("or   : <me> --sleep <num>(h|m|s) --zone /my/leaf/node");
+			System.err.println("   or: <me> --sleep <num>(h|m|s) --zone /my/leaf/node");
 			System.exit(1);
 		}
 
@@ -68,8 +68,7 @@ public class Main {
 	}
 	
 	private static void parseConfigFile(String file) throws IOException {
-		String content = new String(Files.readAllBytes(Paths.get(file)));
-		JSONObject obj = new JSONObject(content);
+		JSONObject obj = ConfigUtils.getConfigObjectFromFile(file);
 		if (obj.has("name"))
 			targetZone = obj.getString("name");
 		if (!obj.has("fetcher"))

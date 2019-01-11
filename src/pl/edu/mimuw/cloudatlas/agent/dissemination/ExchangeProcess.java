@@ -39,7 +39,7 @@ public class ExchangeProcess {
 	public int retryCnt;
 
 	public AgentData remoteData;
-	public CommunicationInfo info;
+	public CommunicationInfo communicationInfo;
 	public PathName remoteName;
 
 	private ExchangeProcess(boolean initializedByMe, long pid, ExchangeProcesConfig config) {
@@ -51,7 +51,7 @@ public class ExchangeProcess {
 
 	private ExchangeProcess(boolean initializedByMe, long pid, ExchangeProcesConfig config, DisseminationMessage msg) {
 		this(initializedByMe, pid, config);
-		this.info = msg.getCommunicationInfo();
+		this.communicationInfo = msg.getCommunicationInfo();
 		this.remoteName = msg.pathName;
 		this.remoteData = msg.data;
 	}
@@ -81,14 +81,14 @@ public class ExchangeProcess {
 					case WAITING_FOR_LOCAL_DATA:
 						switch (msg.type) {
 							case LOCAL_AGENT_DATA:
-								handleLocalDataToSendRequest(msg);
+								handleLocalDataAndSendRequest(msg);
 								break;
 						}
 						break;
 					case WAITING_FOR_REMOTE_DATA:
 						switch (msg.type) {
 							case REMOTE_AGENT_DATA:
-								handleRemoteDataResponse(msg);
+								handleRemoteDataResponseAndSendAck(msg);
 								break;
 							case CALLBACK_RESEND_DATA:
 								sendDataToRemote();
@@ -118,7 +118,7 @@ public class ExchangeProcess {
 					case WAITING_FOR_LOCAL_DATA:
 						switch (msg.type) {
 							case LOCAL_AGENT_DATA:
-								handleLocalDataToSendResponse(msg);
+								handleLocalDataAndSendResponse(msg);
 								break;
 						}
 						break;
@@ -147,31 +147,34 @@ public class ExchangeProcess {
 		config.handler.enqueue(ZMIMessage.getLocalAgentData(pid));
 	}
 
-	private void handleLocalDataToSendRequest(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
+	private void handleLocalDataAndSendRequest(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
 		state = State.WAITING_FOR_REMOTE_DATA;
 		selectNodeForExchange(msg.data);
-		//System.out.println("Selected node " + remoteName);
+		System.out.println("Selected node " + remoteName);
 		prepareRemoteDataMsg(msg.data);
 		sendDataToRemote();
 	}
 
 	private void sendDataToRemote() throws InterruptedException, TooManyTriesException {
 		if (retryCnt >= config.maxRetry) {
-			throw new TooManyTriesException("We resend message to the remote host maximum number of times: " + retryCnt);
+			throw new TooManyTriesException("Resent message to the remote host maximum number of times: " + retryCnt + " and did not receive response.");
 		}
 		retryCnt++;
 		setupTimeoutCallback();
 		config.handler.enqueue(msgToSend);
 	}
 
-	private void handleRemoteDataResponse(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
+	private void handleRemoteDataResponseAndSendAck(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
 		state = State.WAITING_FOR_SHUTDOWN;
 		remoteData = msg.data;
 		assert remoteData != null;
-		info = msg.getCommunicationInfo();
+		communicationInfo = msg.getCommunicationInfo();
 		remoteData.adjustTime(msg.getCommunicationInfo().getTimeDiff());
-		config.handler.enqueue(ZMIMessage.updateWithRemoteData(pid, remoteData));
-
+		
+		ZMIMessage updateMsg = ZMIMessage.updateWithRemoteData(pid, remoteData);
+		remoteData = null; // To have shared nothing architecture we do not use remoteData after sending to other module.
+		config.handler.enqueue(updateMsg);
+		
 		prepareAckMsg();
 		sendDataToRemote();
 	}
@@ -181,7 +184,7 @@ public class ExchangeProcess {
 		config.handler.enqueue(ZMIMessage.getLocalAgentData(pid));
 	}
 
-	private void handleLocalDataToSendResponse(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
+	private void handleLocalDataAndSendResponse(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
 		state = State.WAITING_FOR_REMOTE_DATA;
 		prepareRemoteDataMsg(msg.data);
 		sendDataToRemote();
@@ -189,25 +192,25 @@ public class ExchangeProcess {
 
 	private void prepareRemoteDataMsg(AgentData localData) {
 		ZMIModule.removeInfoUnrelevantForTheOther(localData.getZmi(), config.name, remoteName);
-		DisseminationMessage payload = DisseminationMessage.remoteAgentData(pid, info, localData, config.name);
+		DisseminationMessage payload = DisseminationMessage.remoteAgentData(pid, communicationInfo, localData, config.name);
 		msgToSend = CommunicationMessage.sendMessage(payload);
 		retryCnt = 0;
 	}
 
 	private void prepareAckMsg() {
-		DisseminationMessage payload = DisseminationMessage.ack(pid, info);
+		DisseminationMessage payload = DisseminationMessage.ack(pid, communicationInfo);
 		msgToSend = CommunicationMessage.sendMessage(payload);
 		retryCnt = 0;
 	}
 
 	private void selectNodeForExchange(AgentData localData) {
 		ZMI localZmi = localData.getZmi();
-		ValueContact contact = config.selector.selectNode(localZmi, (ValueSet) localData.getFallbackContacts().getVal());
+		ValueContact contact = config.selector.selectNode(localZmi, (ValueSet) localData.getFallbackContacts().getValue());
 		if (contact == null) {
 			throw new IllegalArgumentException("There is no node to exchange information with.");
 		}
 		remoteName = contact.getName();
-		info = new CommunicationInfo(contact.getAddress(), contact.getPort());
+		communicationInfo = new CommunicationInfo(contact.getAddress(), contact.getPort());
 	}
 
 	private void handleAck(DisseminationMessage msg) throws InterruptedException {
@@ -216,6 +219,7 @@ public class ExchangeProcess {
 		remoteData.adjustTime(timeDiff);
 
 		ZMIMessage updateMsg = ZMIMessage.updateWithRemoteData(pid, remoteData);
+		remoteData = null; // To have shared nothing architecture we do not use remoteData after sending to other module.
 		config.handler.enqueue(updateMsg);
 	}
 

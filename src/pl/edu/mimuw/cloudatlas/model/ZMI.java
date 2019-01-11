@@ -57,13 +57,13 @@ public class ZMI implements Cloneable, Serializable {
 		this.freshness = ValueTime.now();
 	}
 	
-	public void adjustTime(Duration diff) {
+	public void adjustRemoteTimeToLocalTime(Duration diff) {
 		freshness = freshness.adjustTime(diff);
 		for (ZMI son : sons) 
-			son.adjustTime(diff);
+			son.adjustRemoteTimeToLocalTime(diff);
 	}
 	
-	public void updateAttributes(ZMI zmi) {
+	public void updateAttributesIfFresher(ZMI zmi) {
 		if (freshness.isLowerThan(zmi.freshness).getValue()) {
 			attributes = zmi.attributes;
 			freshness = zmi.freshness;
@@ -79,7 +79,7 @@ public class ZMI implements Cloneable, Serializable {
 		if (localContacts != null)
 			mergedContacts.addAll(localContacts);
 		
-		mergedContacts = mergedContacts.random(contactsPerNode);
+		mergedContacts = mergedContacts.randomSubset(contactsPerNode);
 		attributes.addOrChange("contacts", mergedContacts);
 		zmi.attributes.addOrChange("contacts", mergedContacts);
 	}
@@ -108,7 +108,6 @@ public class ZMI implements Cloneable, Serializable {
 			pathName = father.getPathName().levelDown(name);
 		}
 		freshness = ValueTime.now();
-		//initRequiredAttributes(name);
 	}
 	
 	private void initRequiredAttributes(String name) {
@@ -195,13 +194,13 @@ public class ZMI implements Cloneable, Serializable {
 	// Might be usefull to remove unused data before sending ZMI in information dissemination.
 	public void removeAllAttributesExceptContacts() {
 		Value contacts = attributes.getOrNull("contacts");
-		attributes = new AttributesMap();
+		attributes.clear();
 		if (contacts != null)
 			attributes.add("contacts", contacts);
 	}
 	
 	public void removeSons() {
-		sons = new ArrayList<>();
+		sons.clear();
 	}
 	
 	/**
@@ -256,42 +255,5 @@ public class ZMI implements Cloneable, Serializable {
 	@Override
 	public String toString() {
 		return attributes.toString();
-	}
-
-	public void updateAttributes() { // probably should be somewhere else...
-		if (father != null) {
-			ValueInt lvl = (ValueInt)father.getAttributes().get("level");
-			ValueInt myLvl = lvl.addValue(new ValueInt(1L));
-			attributes.addOrChange("level", myLvl);
-
-			ValueString fOwner = (ValueString)father.getAttributes().get("owner");
-			ValueString fName = (ValueString)father.getAttributes().get("name");
-			ValueString myOwner = fOwner.addValue(fName);
-			attributes.addOrChange("owner", myOwner);
-		}
-		else {
-			attributes.addOrChange("level", new ValueInt(0L));
-			attributes.addOrChange("owner", new ValueString(null));
-		}
-
-		ValueInt card = new ValueInt(0L);
-		ValueSet contacts = new ValueSet(TypePrimitive.CONTACT);
-		for (ZMI son : sons) {
-			son.updateAttributes();
-
-			ValueInt sonCard = (ValueInt) son.getAttributes().get("cardinality");
-			ValueSet sonContacts = (ValueSet) son.getAttributes().get("contacts");
-			card = card.addValue(sonCard);
-			if (!sonContacts.isEmpty()) {
-				contacts.add(sonContacts.getValue().iterator().next());
-			}
-		}
-		if (sons.isEmpty()) {
-			card = new ValueInt(1L);
-			contacts = (ValueSet) attributes.get("contacts");
-		}
-
-		attributes.addOrChange("cardinality", card);
-		attributes.addOrChange("contacts", contacts);
 	}
 }

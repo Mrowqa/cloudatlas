@@ -77,7 +77,7 @@ public class Main {
 					new RMIModule(targetZone.getName()),
 					new TimerModule(),
 					new CommunicationModule(socketPort),
-					ZMIModule.createModule(targetZone, createZmi(), fallbackContacts, pubKeyFilename, createLocalContacts(), config),
+					ZMIModule.createModule(createZmi(), config),
 					DisseminationModule.createModule(targetZone, config),
 				};
 			}
@@ -103,45 +103,44 @@ public class Main {
 			testCommunicationModule = true;
 			return;
 		}
-
-		if (args.length == 2 && args[0].equals("--config-file")) {
-			parseConfigFile(args[1]);
-			return;
-		}
 		
-		if (args.length != 4 || !args[0].equals("--zone") || !args[2].equals("--public-key")) {
+		if (args.length != 2 || !args[0].equals("--config-file")) {
 			System.err.println("Usage: <me> --config-file path/to/config/file.conf");
-			System.err.println("   or: <me> --zone /my/leaf/node --public-key path/to/public_key.der");
 			System.err.println("   or: <me> --test-communication-module");
 			System.exit(1);
 		}
 		
-		targetZone = new PathName(args[1]);
-		pubKeyFilename = args[3];
+		parseConfigFile(args[1]);
 	}
 	
 	private static void parseConfigFile(String file) throws IOException {
-		String content = new String(Files.readAllBytes(Paths.get(file)));
-		JSONObject obj = new JSONObject(content);
+		JSONObject obj = ConfigUtils.getConfigObjectFromFile(file);
 		if (obj.has("name"))
 			targetZone = new PathName(obj.getString("name"));
 		else
 			System.err.println("Warning: Using default zone " + targetZone);
+		
 		if (obj.has("pubKeyFilename"))
 			pubKeyFilename = obj.getString("pubKeyFilename");
 		else 
 			System.err.println("Warning: Using default public key: " + pubKeyFilename);
-		if (!obj.has("agent")) {
-			System.err.println("Warning: Fallback contact set will be empty. We might be unable to connect with other agents.");
-			return;
-		}
+		
+		if (!obj.has("agent"))
+			throw new IllegalArgumentException("Agent configuration not found.");		
 		config = obj.getJSONObject("agent");
-		if (config.has("fallbackContacts")) 
-			fallbackContacts = (ValueSet)ZMIJSONSerializer.JSONToValue(config.getJSONObject("fallbackContacts"));
+		
+		if (!config.has("fallbackContacts"))
+			throw new IllegalArgumentException("Fallback contact set cannot be empty.");
+		fallbackContacts = (ValueSet)ZMIJSONSerializer.JSONToValue(config.getJSONObject("fallbackContacts"));
+		
 		if (config.has("socketPort")) 
 			socketPort = config.getInt("socketPort");
 		if (config.has("localContactIp"))
 			localContactIp = config.getString("localContactIp");
+		
+		config.put("name", targetZone.getName());
+		config.put("pubKeyFilename", pubKeyFilename);
+		config.put("localContacts", ZMIJSONSerializer.valueToJSON(createLocalContacts()));
 	}
 	
 	public static ZMI createZmi() throws ParseException, UnknownHostException {

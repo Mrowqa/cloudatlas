@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
+import pl.edu.mimuw.cloudatlas.model.Query;
 import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 
@@ -21,7 +22,7 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
 public class AgentData implements Serializable {
 	private ZMI zmi;
 	private ValueAndFreshness fallbackContacts;
-	private HashMap<Attribute, ValueAndFreshness> queries;
+	private HashMap<Attribute, Query> queries;
 
 	public void setZmi(ZMI zmi) {
 		this.zmi = zmi;
@@ -35,11 +36,11 @@ public class AgentData implements Serializable {
 		return fallbackContacts;
 	}
 
-	public Map<Attribute, ValueAndFreshness> getQueries() {
+	public Map<Attribute, Query> getQueries() {
 		return queries;
 	}
 
-	public AgentData(ZMI zmi, ValueAndFreshness fallbackContacts, HashMap<Attribute, ValueAndFreshness> queries) {
+	public AgentData(ZMI zmi, ValueAndFreshness fallbackContacts, HashMap<Attribute, Query> queries) {
 		this.zmi = zmi;
 		this.fallbackContacts = fallbackContacts;
 		this.queries = queries;
@@ -47,9 +48,8 @@ public class AgentData implements Serializable {
 	
 	
 	public void adjustTime(Duration diff) {
-		zmi.adjustTime(diff);
-		fallbackContacts.adjustTime(diff);
-		for (ValueAndFreshness query : queries.values())
-			query.adjustTime(diff);
+		zmi.adjustRemoteTimeToLocalTime(diff);
+		fallbackContacts = fallbackContacts.adjustTime(diff);
+		queries.replaceAll((k, v) -> v.adjustTime(diff));
 	}
 }

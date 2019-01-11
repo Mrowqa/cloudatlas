@@ -13,6 +13,7 @@ import pl.edu.mimuw.cloudatlas.agent.ModuleMessage;
 import pl.edu.mimuw.cloudatlas.agent.NetworkSendable;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.PathName;
+import pl.edu.mimuw.cloudatlas.model.Query;
 import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 
@@ -44,7 +45,7 @@ public class DisseminationMessage extends ModuleMessage implements NetworkSendab
 	
 	public static DisseminationMessage localAgentData(long msgId, ZMI zmi, 
 			ValueAndFreshness fallbackContacts, 
-			HashMap<Attribute, ValueAndFreshness> queries) {
+			HashMap<Attribute, Query> queries) {
 		DisseminationMessage msg = new DisseminationMessage(Type.LOCAL_AGENT_DATA, msgId);
 		msg.data = new AgentData(zmi, fallbackContacts, queries);
 		return msg;

@@ -9,6 +9,8 @@ package pl.edu.mimuw.cloudatlas.agent.dissemination;
 import java.util.LinkedList;
 import java.util.Random;
 import pl.edu.mimuw.cloudatlas.model.PathName;
+import pl.edu.mimuw.cloudatlas.model.Type;
+import pl.edu.mimuw.cloudatlas.model.TypeCollection;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueContact;
@@ -48,6 +50,9 @@ public abstract class NodeSelector {
 		return selectContact(nodesContacts.get(level));
 	}
 	
+	/**
+	 * Method assumes that there is some contact in nodesContacts.
+	 */
 	protected abstract int selectLevel(LinkedList<LinkedList<ValueSet>> nodesContacts);
 
 
@@ -87,19 +92,20 @@ public abstract class NodeSelector {
 	}
 	
 	private ValueSet getNotEmptyContacts(ZMI zmi) {
-		ValueSet contacts = (ValueSet)zmi.getAttributes().getOrNull("contacts");
-		ValueSet result = null;
-		if (contacts == null || contacts.isNull() || contacts.isEmpty()) {
-			return result;
-		}
-		result = new ValueSet(TypePrimitive.CONTACT);
+		Value contactsRaw = zmi.getAttributes().getOrNull("contacts");
+		if (contactsRaw == null || contactsRaw.isNull())
+			return null;
+		if (!(contactsRaw instanceof ValueSet))
+			return null;
+		ValueSet contacts = (ValueSet)contactsRaw;
+		if (contacts.isEmpty() || ((TypeCollection)contacts.getType()).getElementType().getPrimaryType() != Type.PrimaryType.CONTACT)
+			return null;
+		
+		ValueSet result = new ValueSet(TypePrimitive.CONTACT);
 		for (Value contact : contacts.getValue()) {
-			ValueContact contact1 = (ValueContact)contact;
-			ValueContact outContact = new ValueContact(zmi.getPathName(), contact1.getAddress(), contact1.getPort());
-			result.add(outContact);
+			result.add(contact);
 		}
 		return result;
-		//  && ((TypeCollection)contacts.getType()).getElementType().getPrimaryType() != TypePrimitive.CONTACT
 	}
 
 	private boolean hasAny(LinkedList<LinkedList<ValueSet>> nodesContacts) {

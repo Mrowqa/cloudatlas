@@ -6,11 +6,10 @@
 package pl.edu.mimuw.cloudatlas.webclient;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import org.json.JSONObject;
+import pl.edu.mimuw.cloudatlas.agent.ConfigUtils;
 
 
 /**
@@ -64,7 +63,7 @@ public class Main {
 		
 		if (args.length != 4 || !args[0].equals("--agent-host") || !args[2].equals("--zone")) {
 			System.err.println("Usage: <me> --config-file /path/to/config/file.conf");
-			System.err.println("or   : <me> --agent-host <host> --zone /my/leaf/zone");
+			System.err.println("   or: <me> --agent-host <host> --zone /my/leaf/zone");
 			System.exit(1);
 		}
 
@@ -74,8 +73,7 @@ public class Main {
 	}
 
 	private static void parseConfigFile(String file) throws IOException {
-		String content = new String(Files.readAllBytes(Paths.get(file)));
-		JSONObject obj = new JSONObject(content);
+		JSONObject obj = ConfigUtils.getConfigObjectFromFile(file);
 		String zoneName = null;
 		if (obj.has("name"))
 			zoneName = obj.getString("name");

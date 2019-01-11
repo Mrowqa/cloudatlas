@@ -14,9 +14,9 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
+import pl.edu.mimuw.cloudatlas.model.Query;
 import pl.edu.mimuw.cloudatlas.model.Type;
 import pl.edu.mimuw.cloudatlas.model.TypeCollection;
-import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
@@ -93,7 +93,7 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	@Override
 	public ZMI getWholeZMI() throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_ZMI);
+		ZMIMessage request = ZMIMessage.getZmi(pid);
 		RMIMessage response = waitForResponseOrError(request);
 		return response.zmi;
 	}
@@ -101,7 +101,7 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	@Override
 	public ValueList getZones() throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_ZONES);
+		ZMIMessage request = ZMIMessage.getZones(pid);
 		RMIMessage response = waitForResponseOrError(request);
 		return (ValueList)response.value1;
 	}
@@ -109,7 +109,7 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	@Override
 	public AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_ZONE_ATTRIBUTES, zone);
+		ZMIMessage request = ZMIMessage.getZoneAttributes(pid, zone);
 		RMIMessage response = waitForResponseOrError(request);
 		return response.attributes;
 	}
@@ -126,16 +126,10 @@ public class RMIModule implements CloudAtlasInterface, Module {
 		if (queryNames.size() != 1) {
 			throw new RmiCallException("You can install only one query at once.");
 		}
-		String nameRaw = ((ValueString)queryNames.get(0)).getValue();
-		if (!Attribute.isQuery(new Attribute(nameRaw))) {
-			throw new RmiCallException("Invalid query name " + nameRaw + " should be proceed with &");
-		}
-		String queryRaw = ((ValueString)queryNames.get(0)).getValue();
-		if (queryRaw.isEmpty()) {
-			throw new RmiCallException("Query can't be empty.");
-		}
 		
-		ZMIMessage request = ZMIMessage.installQuery(pid, queryNames.get(0), queries.get(0), signatures.get(0));
+		String queryText = ((ValueString)queries.get(0)).getValue();
+		String querySignature = ((ValueString)signatures.get(0)).getValue();
+		ZMIMessage request = ZMIMessage.installQuery(pid, queryNames.get(0), queryText, querySignature);
 		waitForResponseOrError(request);
 	}
 
@@ -150,17 +144,14 @@ public class RMIModule implements CloudAtlasInterface, Module {
 		if (queryNames.size() != 1) {
 			throw new RmiCallException("You can uninstall only one query at once.");
 		}
-		String nameRaw = ((ValueString)queryNames.get(0)).getValue();
-		if (!Attribute.isQuery(new Attribute(nameRaw))) {
-			throw new RmiCallException("Invalid query name " + nameRaw + " should be proceed with &");
-		}
 		
-		ZMIMessage request = ZMIMessage.uninstallQuery(pid, queryNames.get(0), signatures.get(0));
+		String querySignature = ((ValueString)signatures.get(0)).getValue();
+		ZMIMessage request = ZMIMessage.uninstallQuery(pid, queryNames.get(0), querySignature);
 		waitForResponseOrError(request);
 	}
 	
 	@Override
-	public HashMap<Attribute, ValueAndFreshness> getAllQueries() throws RemoteException {
+	public HashMap<Attribute, Query> getAllQueries() throws RemoteException {
 		long pid = nextPid.getAndIncrement();
 		ZMIMessage request = ZMIMessage.getAllQueries(pid);
 		RMIMessage response = waitForResponseOrError(request);
@@ -188,7 +179,7 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	@Override
 	public ValueSet getFallbackContacts() throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_FALLBACK_CONTACTS);
+		ZMIMessage request = ZMIMessage.getFallbackContacts(pid);
 		RMIMessage response = waitForResponseOrError(request);
 		return (ValueSet)response.value1;
 	}

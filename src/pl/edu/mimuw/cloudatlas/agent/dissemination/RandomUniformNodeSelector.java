@@ -7,6 +7,7 @@
 package pl.edu.mimuw.cloudatlas.agent.dissemination;
 
 import java.util.LinkedList;
+import java.util.List;
 import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 
@@ -20,11 +21,15 @@ public class RandomUniformNodeSelector extends NodeSelector {
 	}
 	
 	@Override
+	/**
+	 * Method can be called only if there exist some contact in nodesContacts.
+	 */
 	protected int selectLevel(LinkedList<LinkedList<ValueSet>> nodesContacts) {
-		int level;
-		do {
-			level = r.nextInt(nodesContacts.size());
-		} while (nodesContacts.get(level).isEmpty());
-		return level;
+		List<Integer> levels = new LinkedList<>();
+		for (int i=0; i < nodesContacts.size(); i++)
+			if (!nodesContacts.get(i).isEmpty())
+				levels.add(i);
+		int ind = r.nextInt(levels.size());
+		return levels.get(ind);
 	}
 }
