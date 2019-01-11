@@ -22,6 +22,18 @@ public class ConfigUtils {
 		return new JSONObject(content);
 	}
 	
+	public static double getDoubleOrDefault(String name, double defValue, JSONObject config) {
+		if (config.has(name))
+			return config.getDouble(name);
+		return defValue;
+	}
+	
+	public static String getStringOrDefault(String name, String defValue, JSONObject config) {
+		if (config.has(name))
+			return config.getString(name);
+		return defValue;
+	}
+	
 	public static Duration parseInterval(String interval) {
 		char durationUnit = interval.charAt(interval.length() - 1);
 		int durationValue = Integer.parseInt(interval.substring(0, interval.length() - 1));

@@ -45,8 +45,8 @@ public abstract class RoundRobinNodeSelector extends NodeSelector {
 	}
 	protected Queue<Level> levels;
 	
-	public RoundRobinNodeSelector(PathName name) {
-		super(name);
+	public RoundRobinNodeSelector(PathName name, double selectFallbackProbability) {
+		super(name, selectFallbackProbability);
 	}
 	
 	@Override

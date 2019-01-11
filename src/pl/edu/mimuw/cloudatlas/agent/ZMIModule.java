@@ -520,7 +520,6 @@ public class ZMIModule extends Thread implements Module {
 			PathName nodeName = new PathName(components.subList(0, i+1));
 			ZMI node = findZone(zmi, nodeName);
 			if (node == null) {
-				System.out.println("New node created from contacts: " + contact.getName());
 				node = new ZMI(father, nodeName.getSingletonName());
 				father.addSon(node);
 				

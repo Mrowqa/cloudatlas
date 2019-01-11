@@ -8,6 +8,8 @@ package pl.edu.mimuw.cloudatlas.agent.dissemination;
 
 import java.util.LinkedList;
 import java.util.Random;
+import org.json.JSONObject;
+import pl.edu.mimuw.cloudatlas.agent.ConfigUtils;
 import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.Type;
 import pl.edu.mimuw.cloudatlas.model.TypeCollection;
@@ -23,27 +25,39 @@ import pl.edu.mimuw.cloudatlas.model.ZMI;
  */
 public abstract class NodeSelector {
 	public static final String DEFAULT_SELECTOR_NAME = "random";
+	public static final double DEFAULT_SELECT_FALLBACK_PROBABILITY = 0.1;
 	protected final PathName name;
 	protected final Random r = new Random();
-
-	public NodeSelector(PathName name) {
+	protected final double selectFallbackProbability;
+	
+	public NodeSelector(PathName name, double selectFallbackProbability) {
 		this.name = name;
+		this.selectFallbackProbability = selectFallbackProbability;
 	}
 	
-	public static NodeSelector createByName(String className, PathName name) {
+	public static NodeSelector createByName(String className, PathName name, double selectFallbackProbability) {
 		switch(className) {
-			case "random": return new RandomUniformNodeSelector(name);
-			case "randomExponential": return new RandomExponentialNodeSelector(name);
-			case "roundRobin": return new RoundRobinUniformNodeSelector(name);
-			case "roundRobinExponential": return new RoundRobinExponentialNodeSelector(name);
+			case "random": return new RandomUniformNodeSelector(name, selectFallbackProbability);
+			case "randomExponential": return new RandomExponentialNodeSelector(name, selectFallbackProbability);
+			case "roundRobin": return new RoundRobinUniformNodeSelector(name, selectFallbackProbability);
+			case "roundRobinExponential": return new RoundRobinExponentialNodeSelector(name, selectFallbackProbability);
 			default: return null; // Unknon subclass;
 		}
+	}
+	
+	
+	public static NodeSelector fromConfig(JSONObject config) {
+		PathName nodeName = new PathName(config.getString("name"));
+		double selectFallbackPr = ConfigUtils.getDoubleOrDefault("selectFallbackOrDefault", DEFAULT_SELECT_FALLBACK_PROBABILITY, config);
+		String className = ConfigUtils.getStringOrDefault("nodeSelector", DEFAULT_SELECTOR_NAME, config);
+		return createByName(className, nodeName, selectFallbackPr);
 	}
 	
 	public ValueContact selectNode(ZMI zmi, ValueSet fallbackContacts) {
 		LinkedList<LinkedList<ValueSet>> nodesContacts = extractContacts(zmi);
 		fallbackContacts = filterMe(fallbackContacts);
-		if (!hasAny(nodesContacts)) {
+		// We sometimes select fallback at random to get information from whole ZMI hierarchy.
+		if (!hasAny(nodesContacts) || shouldRandomlyContactFallback()) {
 			return selectContact(fallbackContacts);
 		}
 		int level = selectLevel(nodesContacts);
@@ -129,5 +143,9 @@ public abstract class NodeSelector {
 	private ValueContact selectContact(LinkedList<ValueSet> nodesContacts) {
 		int ind = r.nextInt(nodesContacts.size());
 		return selectContact(nodesContacts.get(ind));
+	}
+	
+	private boolean shouldRandomlyContactFallback() {
+		return r.nextDouble() <= selectFallbackProbability;
 	}
 }

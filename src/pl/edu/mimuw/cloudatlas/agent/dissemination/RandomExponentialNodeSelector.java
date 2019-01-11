@@ -19,12 +19,12 @@ public class RandomExponentialNodeSelector extends NodeSelector {
 	public static int DEFAULT_MULTIPLIER = 2;
 	private final int multiplier;	
 	
-	public RandomExponentialNodeSelector(PathName name) {
-		this(name, DEFAULT_MULTIPLIER);
+	public RandomExponentialNodeSelector(PathName name, double selectFallbackProbability) {
+		this(name, selectFallbackProbability, DEFAULT_MULTIPLIER);
 	}
 	
-	public RandomExponentialNodeSelector(PathName name, int multiplier) {
-		super(name);
+	public RandomExponentialNodeSelector(PathName name, double selectFallbackProbability, int multiplier) {
+		super(name, selectFallbackProbability);
 		this.multiplier = multiplier;
 	}
 	

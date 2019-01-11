@@ -37,11 +37,7 @@ public class DisseminationModule extends Thread implements Module {
 	}
 	
 	public static DisseminationModule createModule(PathName node, JSONObject config) {
-		NodeSelector selector;
-		if (config != null && config.has("nodeSelector"))
-			selector = NodeSelector.createByName(config.getString("nodeSelector"), node);
-		else 
-			selector = NodeSelector.createByName(NodeSelector.DEFAULT_SELECTOR_NAME, node);
+		NodeSelector selector = NodeSelector.fromConfig(config);
 		ExchangeProcesConfig config2 = ExchangeProcesConfig.createConfig(node, selector, config);
 		return new DisseminationModule(config2);
 	}

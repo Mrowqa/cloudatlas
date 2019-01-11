@@ -16,10 +16,9 @@ import pl.edu.mimuw.cloudatlas.model.ValueSet;
  * @author pawel
  */
 public class RandomUniformNodeSelector extends NodeSelector {
-	public RandomUniformNodeSelector(PathName name) {
-		super(name);
+	public RandomUniformNodeSelector(PathName name, double selectFallbackProbability) {
+		super(name, selectFallbackProbability);
 	}
-	
 	@Override
 	/**
 	 * Method can be called only if there exist some contact in nodesContacts.

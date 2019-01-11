@@ -19,12 +19,12 @@ public class RoundRobinExponentialNodeSelector extends RoundRobinNodeSelector {
 	public static int DEFAULT_MULTIPLIER = 2;
 	private final int multiplier;
 	
-	public RoundRobinExponentialNodeSelector(PathName name) {
-		this(name, DEFAULT_MULTIPLIER);
+	public RoundRobinExponentialNodeSelector(PathName name, double selectFallbackProbability) {
+		this(name, selectFallbackProbability, DEFAULT_MULTIPLIER);
 	}
 	
-	public RoundRobinExponentialNodeSelector(PathName name, int multiplier) {
-		super(name);
+	public RoundRobinExponentialNodeSelector(PathName name, double selectFallbackProbability, int multiplier) {
+		super(name, selectFallbackProbability);
 		this.multiplier = multiplier;
 		this.levels = new ArrayDeque<>();
 		

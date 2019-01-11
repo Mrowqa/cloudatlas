@@ -264,7 +264,7 @@ public class Sr_labs {
 		
 		ValueSet fallback = new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT);
 		ZMI zmi = ZMIHierarchyBuilder.createHierarchyForNodeSelectionTest(); // ZMIHierarchyBuilder.createLeafNodeHierarchy(name); 
-		NodeSelector selector = NodeSelector.createByName("roundRobinExponential", name);
+		NodeSelector selector = NodeSelector.createByName("roundRobinExponential", name, NodeSelector.DEFAULT_SELECT_FALLBACK_PROBABILITY);
 		
 		HashMap<String, Integer> nodeCount = new HashMap<>();
 		for (int i = 0; i < numRepeats; i++) {

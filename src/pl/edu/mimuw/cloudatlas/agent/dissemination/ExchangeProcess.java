@@ -150,7 +150,7 @@ public class ExchangeProcess {
 	private void handleLocalDataAndSendRequest(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
 		state = State.WAITING_FOR_REMOTE_DATA;
 		selectNodeForExchange(msg.data);
-		System.out.println("Selected node " + remoteName);
+		//System.out.println("Selected node " + remoteName);
 		prepareRemoteDataMsg(msg.data);
 		sendDataToRemote();
 	}
