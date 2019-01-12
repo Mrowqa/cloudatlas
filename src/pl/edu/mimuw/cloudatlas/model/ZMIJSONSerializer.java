@@ -258,7 +258,7 @@ public class ZMIJSONSerializer {
 			case "se": return new TypeCollection(Type.PrimaryType.SET, stringToType(str.substring("se|".length())));
 			case "st": return TypePrimitive.STRING;
 			case "t": return TypePrimitive.TIME;
-			case "w": return new TypeWrapper(stringToType(str.substring("se|".length())));
+			case "w": return new TypeWrapper(stringToType(str.substring("w|".length())));
 			default:
 				throw new IllegalArgumentException("Unknown type!");
 		}

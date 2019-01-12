@@ -10,7 +10,7 @@ path=${rundir}:${dir}/lib/cup.jar:${dir}/lib/JLex.jar:${dir}/lib/guava-23.0.jar:
 if [ "$1" = "--config-file" ]; then
   key=$(python -c "import json; print(json.load(open('${2}'))['pubKeyFilename'])");
   cp ${key} ${rundir}
-  cp ${2} ${rundir}
+  cp "${2}" ${rundir}
 fi
 
 cd build/classes && java -cp ${path} -Djava.rmi.server.codebase=file:${rundir} \

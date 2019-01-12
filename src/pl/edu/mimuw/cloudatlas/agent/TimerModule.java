@@ -187,7 +187,7 @@ public class TimerModule extends Thread implements Module {
 						events.scheduleOneTimeEvent(eventTime, message.id, message.callbackMessage);
 						break;
 					}
-					case SCHEDULE_CYCLIC_CALLBACK: {
+					case SCHEDULE_RECURRING_CALLBACK: {
 						LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
 						events.scheduleRecurringEvent(eventTime, message.id, message.duration, message.callbackMessage);
 						break;

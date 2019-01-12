@@ -28,7 +28,7 @@ public class Query implements Serializable {
 		this.freshness = freshness;
 	}
 	
-	public Query adjustTime(Duration diff) {
+	public Query getWithAdjustedTime(Duration diff) {
 		return new Query(text, signature, freshness.adjustTime(diff));
 	}
 	
@@ -49,5 +49,9 @@ public class Query implements Serializable {
 			return query;
 		}
 		return this;
+	}
+	
+	public boolean isNull() {
+		return text == null || signature == null || freshness == null || freshness.isNull();
 	}
 }

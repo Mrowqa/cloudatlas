@@ -50,6 +50,6 @@ public class AgentData implements Serializable {
 	public void adjustTime(Duration diff) {
 		zmi.adjustRemoteTimeToLocalTime(diff);
 		fallbackContacts = fallbackContacts.adjustTime(diff);
-		queries.replaceAll((k, v) -> v.adjustTime(diff));
+		queries.replaceAll((k, v) -> v.getWithAdjustedTime(diff));
 	}
 }

@@ -9,6 +9,7 @@ import pl.edu.mimuw.cloudatlas.agent.dissemination.AgentData;
 import pl.edu.mimuw.cloudatlas.agent.dissemination.DisseminationMessage;
 import java.io.ByteArrayInputStream;
 import java.net.DatagramSocket;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -109,10 +110,15 @@ public class ZMIModule extends Thread implements Module {
 	}
 	
 	private static ValueSet createLocalContactsSet(PathName name, JSONObject config) throws SocketException, UnknownHostException {
-		// Detect prefered outbound IP: https://stackoverflow.com/questions/9481865/getting-the-ip-address-of-the-current-machine-using-java
-		DatagramSocket socket = new DatagramSocket();
-		socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
-		InetAddress ip = socket.getLocalAddress();
+		InetAddress ip = null;
+		if (config.has("localContactIp")) {
+			ip = Inet4Address.getByName(config.getString("localContactIp"));
+		} else {
+			// Detect prefered outbound IP: https://stackoverflow.com/questions/9481865/getting-the-ip-address-of-the-current-machine-using-java
+			DatagramSocket socket = new DatagramSocket();
+			socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
+			ip = socket.getLocalAddress();
+		}
 		int port = config.getInt("socketPort");
 		
 		ValueContact contactRaw = new ValueContact(name, ip, port);
@@ -157,7 +163,7 @@ public class ZMIModule extends Thread implements Module {
 			scheduleQueriesExecutionRecurringEvent();
 			scheduleRemoveOutdatedZonesRecurringEvent();
 		} catch (Exception ex) {
-			throw new RuntimeException("Failed to schedule cyclic ZMI actions. Occured exception: " + ex);
+			throw new RuntimeException("Failed to schedule recurring ZMI actions. Occured exception: " + ex);
 		}
 		while (true) {
 			try {
@@ -404,7 +410,7 @@ public class ZMIModule extends Thread implements Module {
 	private void scheduleQueriesExecutionRecurringEvent() throws InterruptedException {
 		long id = random.nextLong();
 		ZMIMessage callbackMessage = ZMIMessage.executeQueries();
-		TimerMessage message = TimerMessage.scheduleCyclicCallback(id, queryExecutionInterval, callbackMessage);
+		TimerMessage message = TimerMessage.scheduleRecurringCallback(id, queryExecutionInterval, callbackMessage);
 		modulesHandler.enqueue(message);
 	}
 
@@ -422,6 +428,8 @@ public class ZMIModule extends Thread implements Module {
 		for (Entry<Attribute, Query> entry : remoteData.getQueries().entrySet()) {
 			String remoteQueryName = entry.getKey().getName();
 			Query remoteQuery = entry.getValue();
+			if (entry.getValue().isNull())
+				continue;
 			
 			QueryOperation operation = null;
 			if (remoteQuery.getText().isEmpty()) {
@@ -437,6 +445,11 @@ public class ZMIModule extends Thread implements Module {
 				Logger.getLogger(ZMIModule.class.getName()).log(Level.FINE, "Exception occured while verifing query. ", ex);
 				continue;
 			}
+
+			// If local query has been uninstalled we do not let to install it again.
+			Query localQuery = queries.getOrDefault(entry.getKey(), null);
+			if (localQuery != null && localQuery.getText().isEmpty() && !remoteQuery.getText().isEmpty())
+				continue;
 			
 			queries.merge(entry.getKey(), remoteQuery, (q1, q2) -> q1.getFresher(q2));
 		}

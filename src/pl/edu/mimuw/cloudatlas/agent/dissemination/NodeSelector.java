@@ -116,6 +116,10 @@ public abstract class NodeSelector {
 		ValueSet contacts = (ValueSet)contactsRaw;
 		if (contacts.isEmpty())
 			return null;
+		if (contacts.getType().getPrimaryType() != Type.PrimaryType.WRAPPER)
+			return null;
+		if (((TypeWrapper)contacts.getType()).getNestedType().getPrimaryType() != Type.PrimaryType.CONTACT)
+			return null;
 		ValueSet result = new ValueSet(new TypeWrapper(TypePrimitive.CONTACT));
 		for (Value contact : contacts.getValue()) {
 			result.add(contact);

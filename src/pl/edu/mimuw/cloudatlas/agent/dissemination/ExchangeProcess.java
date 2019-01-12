@@ -195,6 +195,7 @@ public class ExchangeProcess {
 	}
 
 	private void prepareRemoteDataMsg(AgentData localData) {
+		// Once we prepared data we won't modify it. Sending to other module is correct in terms of shared-nothing architecture.
 		ZMIModule.removeInfoUnrelevantForTheOther(localData.getZmi(), config.name, remoteName);
 		DisseminationMessage payload = DisseminationMessage.remoteAgentData(pid, communicationInfo, localData, config.name);
 		msgToSend = CommunicationMessage.sendMessage(payload);

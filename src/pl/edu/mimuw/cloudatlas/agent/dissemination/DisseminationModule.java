@@ -62,9 +62,9 @@ public class DisseminationModule extends Thread implements Module {
 	public void run() {
 		try {
 			if (config.initializeDissemination)
-				scheduleDisseminationCyclicEvent();
+				scheduleDisseminationRecurringEvent();
 		} catch (Exception ex) {
-			throw new RuntimeException("Failed to schedule cyclic dissemination event. Occured exception: " + ex);
+			throw new RuntimeException("Failed to schedule recurring dissemination event. Occured exception: " + ex);
 		}
 		while(true) {
 			try {
@@ -98,10 +98,10 @@ public class DisseminationModule extends Thread implements Module {
 		}
 	}
 
-	private void scheduleDisseminationCyclicEvent() throws InterruptedException {
+	private void scheduleDisseminationRecurringEvent() throws InterruptedException {
 		long pid = r.nextLong();
 		DisseminationMessage innerMsg = DisseminationMessage.callbackStartNewExchange(pid);
-		TimerMessage msg = TimerMessage.scheduleCyclicCallback(pid, config.disseminationInterval, innerMsg);
+		TimerMessage msg = TimerMessage.scheduleRecurringCallback(pid, config.disseminationInterval, innerMsg);
 		config.handler.enqueue(msg);
 	}
 }
