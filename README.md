@@ -36,7 +36,7 @@ Then, run the agent::
 
     $ ./server.sh --config-file path/to/config/file.conf
 
-There are some test configs included to this packages. Look for `*.conf` files.
+There are some test configs included in this package. Look for `*.conf` files.
 They are self explanatory.
 
 Agent comes with communication module test::
@@ -71,7 +71,7 @@ Signer is a centralized service for signing queries. You can run it with::
 
 private-key: key used for signing queries operations,
              default is `private_key.der`
-database: signer synchronizes its state with database, uses SQLite,
+database: signer synchronizes its state with a SQLite database,
           default is `signer.db`
 
 #### WebClient
@@ -82,9 +82,9 @@ store historical data, for the charts. It runs at localhost:8000.
     $ ./webclient.sh --agent-host <host> --zone /my/leaf/node
     $ ./webclient.sh --config-file /path/to/config/file.conf
 
-agent-host: client connects to this host to registry, and asks there for
-            remote agent stub
-zone: name of target agent's zone
+agent-host: client connects to this host's registry, then asks it for a remote
+            agent stub
+zone: name of the remote agent's zone
 
 #### Standalone query interpreter
 
