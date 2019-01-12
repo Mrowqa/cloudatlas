@@ -34,11 +34,10 @@ First, run the rmi registry with::
 
 Then, run the agent::
 
-    $ ./server.sh --sleep 5m --zone /my/leaf/node --public-key path/to/public_key.der
+    $ ./server.sh --config-file path/to/config/file.conf
 
-You can pass an extra argument to configure how often Agent executes installed
-queries. Default is 5 seconds. You can also specify zone name for the agent
-and RSA public key used for queries signatures verification.
+There are some test configs included to this packages. Look for `*.conf` files.
+They are self explanatory.
 
 Agent comes with communication module test::
 
@@ -58,30 +57,34 @@ on localhost::
     $ ./fetcher.sh --sleep 5m --zone /uw/violet07
 
 sleep: how often fetch data and set them in agent, default 5 seconds
-zone: the specified zone that fetcher feeds data to
+zone: the specified zone that fetcher feeds data to, default /uw/violet07
+
+You can also run it with config file::
+
+    $ ./fetcher.sh --config-file path/to/config/file.conf
 
 #### Query Signer
 
 Signer is a centralized service for signing queries. You can run it with::
 
-    $ ./signer.sh --private-key path/to/private_key.der
+    $ ./signer.sh --private-key path/to/private_key.der --database /path/to/signer.db
 
-You can specify RSA private key used for queries signing.
+private-key: key used for signing queries operations,
+             default is `private_key.der`
+database: signer synchronizes its state with database, uses SQLite,
+          default is `signer.db`
 
 #### WebClient
 
 WebClient provides a web interface to interact with CloudAtlas. It does also
 store historical data, for the charts. It runs at localhost:8000.
 
-    $ ./webclient.sh --sleep 5m
+    $ ./webclient.sh --agent-host <host> --zone /my/leaf/node
+    $ ./webclient.sh --config-file /path/to/config/file.conf
 
-sleep: how often fetch data for history charts, default 5 seconds
-
-#### CLI
-
-Simple command line interface::
-
-    $ ./client.sh
+agent-host: client connects to this host to registry, and asks there for
+            remote agent stub
+zone: name of target agent's zone
 
 #### Standalone query interpreter
 
