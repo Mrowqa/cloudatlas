@@ -91,11 +91,6 @@ public class Main {
 	}
 	
 	private static void parseCmdArgs(String[] args) throws IOException {
-		if (args.length == 0) {
-			System.out.println("Warning: using default configuration.");
-			return;
-		}
-
 		if (args.length == 1 && args[0].equals("--test-communication-module")) {
 			testCommunicationModule = true;
 			return;

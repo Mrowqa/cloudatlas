@@ -180,6 +180,12 @@ public class TimerModule extends Thread implements Module {
 		sleeperThread.start();
 		while (true) {
 			try {
+				// Assumption: theoretically, we could have an id collision, but it's not easy to handle:
+				// we could introduce update messages to overwrite existing events, but it would make
+				// scheduling regular messages able to fail, so there should be extra callback for the fail
+				// case and all other modules would need to introduce complex logic to handle it
+				// so, we just assume, that long type (8 bytes) is just enough big, so that the probability
+				// of a collision is negligible
 				TimerMessage message = messages.take();
 				switch (message.type) {
 					case SCHEDULE_ONE_TIME_CALLBACK: {

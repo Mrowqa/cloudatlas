@@ -253,7 +253,7 @@ public class ZMI implements Cloneable, Serializable {
 		return attributes.toString();
 	}
 	
-	public static ValueContact unwrappContact(Value value) {
+	public static ValueContact unwrapContact(Value value) {
 		switch (value.getType().getPrimaryType()) {
 			case CONTACT:
 				return (ValueContact)value;

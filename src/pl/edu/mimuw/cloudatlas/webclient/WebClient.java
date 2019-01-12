@@ -73,6 +73,7 @@ public class WebClient {
 		server.createContext("/query/uninstall", new UninstallQueryHandler());
 		server.createContext("/query/get", new GetAllQueriesHandler());
 		server.createContext("/zones/get", new GetZonesHandler());
+		server.createContext("/zones/local-name", new LocalZoneNameHandler());
 		server.createContext("/zones/attributes/get", new GetZoneAttributesHandler());
 		server.createContext("/zones/attributes/set", new SetZoneAttributesHandler());
 		server.createContext("/fallback-contacts/get", new GetFallbackContactsHandler());
@@ -138,6 +139,17 @@ public class WebClient {
 			}
 			
 			WebClient.sendResponse(t, statusCode, rmiResult);
+		}
+	}
+	
+	private class LocalZoneNameHandler implements HttpHandler {
+		@Override
+		public void handle(HttpExchange t) throws IOException {
+			if (!t.getRequestMethod().equals("GET")) {
+				return;
+			}
+			
+			WebClient.sendResponse(t, 200, config.getString("name"));
 		}
 	}
 	

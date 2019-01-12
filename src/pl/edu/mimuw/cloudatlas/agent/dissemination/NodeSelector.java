@@ -99,7 +99,7 @@ public abstract class NodeSelector {
 	private ValueSet filterMe(ValueSet contacts) {
 		ValueSet filtered = new ValueSet(TypePrimitive.CONTACT);
 		for (Value contact : contacts.getValue()) {
-			ValueContact contact1 = ZMI.unwrappContact(contact);
+			ValueContact contact1 = ZMI.unwrapContact(contact);
 			if (!contact1.getName().equals(name)) {
 				filtered.add(contact);
 			}
@@ -142,7 +142,7 @@ public abstract class NodeSelector {
 		if (contacts.isEmpty())
 			return null;
 		int ind = r.nextInt(contacts.size());
-		return ZMI.unwrappContact((Value)contacts.getValue().toArray()[ind]);
+		return ZMI.unwrapContact((Value)contacts.getValue().toArray()[ind]);
 	}
 
 	private ValueContact selectContact(LinkedList<ValueSet> nodesContacts) {
