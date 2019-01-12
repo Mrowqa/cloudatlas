@@ -154,6 +154,16 @@ public class ZMIJSONSerializer {
 				}
 				catch (NullPointerException ex) {}
 				break;
+			case "WRAPPER":
+				try {
+					// two steps, because we want to add both or neither
+					Value value = ((ValueAndFreshness)v).getValue();
+					Value freshness = ((ValueAndFreshness)v).getFreshness();
+					obj.put("v", valueToJSON(value));
+					obj.put("t", valueToJSON(freshness));
+				}
+				catch (NullPointerException ex) {}
+				break;
 			default:
 				throw new IllegalArgumentException("Invalid Value type!");
 		}
@@ -223,6 +233,12 @@ public class ZMIJSONSerializer {
 			case "t": // time
 				// assert ValueTime(obj["p"]) == ValueTime(obj["v"])
 				return new ValueTime(obj.has("v") ? (long) obj.getLong("v") : null);
+			case "w": { // wrapper (ValueAndFreshness)
+				Value value = JSONToValue(obj.getJSONObject("v"));
+				ValueTime freshness = (ValueTime)JSONToValue(obj.getJSONObject("t"));
+				return new ValueAndFreshness(value, freshness);
+			}
+			
 			default:
 				throw new RuntimeException("Invalid Value type!");
 		}
@@ -242,6 +258,7 @@ public class ZMIJSONSerializer {
 			case "se": return new TypeCollection(Type.PrimaryType.SET, stringToType(str.substring("se|".length())));
 			case "st": return TypePrimitive.STRING;
 			case "t": return TypePrimitive.TIME;
+			case "w": return new TypeWrapper(stringToType(str.substring("se|".length())));
 			default:
 				throw new IllegalArgumentException("Unknown type!");
 		}
@@ -259,6 +276,7 @@ public class ZMIJSONSerializer {
 			case "SET": return "se|" + typeToString(((TypeCollection)t).getElementType());
 			case "STRING": return "st";
 			case "TIME": return "t";
+			case "WRAPPER": return "w|" + typeToString(((TypeWrapper)t).getNestedType());
 			default:
 				throw new IllegalArgumentException("Unknown type!");
 		}

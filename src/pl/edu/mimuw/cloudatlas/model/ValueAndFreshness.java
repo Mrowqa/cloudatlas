@@ -10,10 +10,11 @@ import java.io.Serializable;
 import java.time.Duration;
 
 /**
- *
+ * Wrapper on single Value. Alongside with value we store its freshness.
  * @author pawel
  */
-public class ValueAndFreshness implements Serializable {
+public class ValueAndFreshness extends Value implements Serializable {
+	private TypeWrapper type;
 	private Value value;
 	private ValueTime freshness;
 	
@@ -25,8 +26,9 @@ public class ValueAndFreshness implements Serializable {
 		return freshness;
 	}
 
-	public ValueAndFreshness(Value val, ValueTime freshness) {
-		this.value = val;
+	public ValueAndFreshness(Value value, ValueTime freshness) {
+		this.type = new TypeWrapper(value.getType());
+		this.value = value;
 		this.freshness = freshness;
 	}
 	
@@ -43,5 +45,37 @@ public class ValueAndFreshness implements Serializable {
 			return valAndTs;
 		}
 		return this;
+	}
+
+	@Override
+	public Type getType() {
+		return type;
+	}
+
+	@Override
+	public boolean isNull() {
+		return value.isNull();
+	}
+
+	@Override
+	public Value convertTo(Type to) {
+		switch(to.getPrimaryType()) {
+			case WRAPPER:
+				if (((TypeWrapper)to).getNestedType() == type.getNestedType())
+					return this;
+				throw new UnsupportedConversionException(getType(), to);
+			case STRING:
+				if(isNull())
+					return ValueString.NULL_STRING;
+				else
+					return new ValueString("(" + value.toString() + " at " + freshness.toString() + ")");
+			default:
+				throw new UnsupportedConversionException(getType(), to);
+		}
+	}
+
+	@Override
+	public Value getDefaultValue() {
+		return new ValueAndFreshness(ValueNull.getInstance(), ValueTime.now());
 	}
 }

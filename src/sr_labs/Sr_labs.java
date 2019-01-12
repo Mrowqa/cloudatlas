@@ -10,7 +10,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -18,6 +20,7 @@ import java.rmi.registry.Registry;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -58,9 +61,29 @@ public class Sr_labs {
 	/**
 	 * @param args the command line arguments
 	 */
-	public static void main(String[] args) throws ParseException, UnknownHostException, IOException, ClassNotFoundException {		
+	public static void main(String[] args) throws ParseException, UnknownHostException, IOException, ClassNotFoundException {
+		System.out.println("First method");
+		try(final DatagramSocket socket = new DatagramSocket()){
+			socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
+			String ip = socket.getLocalAddress().getHostAddress();
+			System.out.println(ip);
+		}
+		
+		System.out.println("Second method");
+		Enumeration e = NetworkInterface.getNetworkInterfaces();
+		while(e.hasMoreElements())
+		{
+			NetworkInterface n = (NetworkInterface) e.nextElement();
+			Enumeration ee = n.getInetAddresses();
+			while (ee.hasMoreElements())
+			{
+				InetAddress i = (InetAddress) ee.nextElement();
+				System.out.println(i.getHostAddress());
+			}
+		}
+
 		//testZMIModuleUtilFunctions();
-		testNodeSelection();
+		//testNodeSelection();
 		//testSerialize();
 		//testSerializeJSON();
 		//testCloudAtlasAgent();

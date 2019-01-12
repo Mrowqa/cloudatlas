@@ -62,14 +62,13 @@ public class DisseminationModule extends Thread implements Module {
 	public void run() {
 		try {
 			if (config.initializeDissemination)
-				scheduleNextDissemination();
-		} catch (InterruptedException ex) {
-			Logger.getLogger(DisseminationModule.class.getName()).log(Level.SEVERE, null, ex);
+				scheduleDisseminationCyclicEvent();
+		} catch (Exception ex) {
+			throw new RuntimeException("Failed to schedule cyclic dissemination event. Occured exception: " + ex);
 		}
 		while(true) {
 			try {
 				DisseminationMessage msg = messages.take();
-				//System.out.println("Got msg with pid "+ msg.pid +" and type " + msg.type + " in dissemination module.");
 				ExchangeProcess proc = processes.getOrDefault(msg.pid, null);
 				if (proc == null) {
 					proc = ExchangeProcess.fromFirstMessage(msg, config);
@@ -80,7 +79,7 @@ public class DisseminationModule extends Thread implements Module {
 								new Object[]{msg.type, msg.pid});
 						continue;
 					}
-					processes.put(msg.pid, proc);
+					processes.put(proc.getPid(), proc);
 				}
 				try {
 					proc.handleMsg(msg);
@@ -89,12 +88,7 @@ public class DisseminationModule extends Thread implements Module {
 					assert proc.isFinished();
 				}
 				if (proc.isFinished()) {
-					//System.out.println("Exchange process " + msg.pid + "finished.");
 					handler.enqueue(TimerMessage.cancelCallback(msg.pid));
-					if (proc.isInitializedByMe()) {
-						//System.out.println("Scheduling next dissemination.");
-						scheduleNextDissemination();
-					}
 					processes.remove(msg.pid);
 				}
 			}
@@ -104,10 +98,10 @@ public class DisseminationModule extends Thread implements Module {
 		}
 	}
 
-	private void scheduleNextDissemination() throws InterruptedException {
+	private void scheduleDisseminationCyclicEvent() throws InterruptedException {
 		long pid = r.nextLong();
 		DisseminationMessage innerMsg = DisseminationMessage.callbackStartNewExchange(pid);
-		TimerMessage msg = TimerMessage.scheduleOneTimeCallback(pid, config.disseminationInterval, innerMsg);
+		TimerMessage msg = TimerMessage.scheduleCyclicCallback(pid, config.disseminationInterval, innerMsg);
 		config.handler.enqueue(msg);
 	}
 }

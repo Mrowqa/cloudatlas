@@ -14,7 +14,7 @@ import java.time.Duration;
  */
 public class TimerMessage extends ModuleMessage {
 	public enum Type {
-		SCHEDULE_ONE_TIME_CALLBACK, CANCEL_CALLBACK
+		SCHEDULE_ONE_TIME_CALLBACK, SCHEDULE_CYCLIC_CALLBACK, CANCEL_CALLBACK
 	}
 
 	public Type type;
@@ -23,7 +23,11 @@ public class TimerMessage extends ModuleMessage {
 	public ModuleMessage callbackMessage;
 
 	public static TimerMessage scheduleOneTimeCallback(long id, Duration callbackDuration, ModuleMessage callbackMessage) {
-		return new TimerMessage(id, callbackDuration, callbackMessage);
+		return new TimerMessage(Type.SCHEDULE_ONE_TIME_CALLBACK, id, callbackDuration, callbackMessage);
+	}
+	
+	public static TimerMessage scheduleCyclicCallback(long id, Duration calDuration, ModuleMessage callbackMessage) {
+		return new TimerMessage(Type.SCHEDULE_CYCLIC_CALLBACK, id, calDuration, callbackMessage);
 	}
 	
 	public static TimerMessage cancelCallback(long id) {
@@ -35,8 +39,8 @@ public class TimerMessage extends ModuleMessage {
 		this.id = id;
 	}
 	
-	private TimerMessage(long id, Duration duration, ModuleMessage callbackMessage) {
-		this.type = Type.SCHEDULE_ONE_TIME_CALLBACK;
+	private TimerMessage(Type type, long id, Duration duration, ModuleMessage callbackMessage) {
+		this.type = type;
 		this.id = id;
 		this.duration = duration;
 		this.callbackMessage = callbackMessage;

@@ -14,7 +14,9 @@ import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.Type;
 import pl.edu.mimuw.cloudatlas.model.TypeCollection;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
+import pl.edu.mimuw.cloudatlas.model.TypeWrapper;
 import pl.edu.mimuw.cloudatlas.model.Value;
+import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ValueContact;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
@@ -97,7 +99,7 @@ public abstract class NodeSelector {
 	private ValueSet filterMe(ValueSet contacts) {
 		ValueSet filtered = new ValueSet(TypePrimitive.CONTACT);
 		for (Value contact : contacts.getValue()) {
-			ValueContact contact1 = (ValueContact)contact;
+			ValueContact contact1 = ZMI.unwrappContact(contact);
 			if (!contact1.getName().equals(name)) {
 				filtered.add(contact);
 			}
@@ -112,10 +114,9 @@ public abstract class NodeSelector {
 		if (!(contactsRaw instanceof ValueSet))
 			return null;
 		ValueSet contacts = (ValueSet)contactsRaw;
-		if (contacts.isEmpty() || ((TypeCollection)contacts.getType()).getElementType().getPrimaryType() != Type.PrimaryType.CONTACT)
+		if (contacts.isEmpty())
 			return null;
-		
-		ValueSet result = new ValueSet(TypePrimitive.CONTACT);
+		ValueSet result = new ValueSet(new TypeWrapper(TypePrimitive.CONTACT));
 		for (Value contact : contacts.getValue()) {
 			result.add(contact);
 		}
@@ -137,7 +138,7 @@ public abstract class NodeSelector {
 		if (contacts.isEmpty())
 			return null;
 		int ind = r.nextInt(contacts.size());
-		return (ValueContact)contacts.getValue().toArray()[ind];
+		return ZMI.unwrappContact((Value)contacts.getValue().toArray()[ind]);
 	}
 
 	private ValueContact selectContact(LinkedList<ValueSet> nodesContacts) {

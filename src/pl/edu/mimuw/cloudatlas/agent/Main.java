@@ -11,8 +11,6 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import pl.edu.mimuw.cloudatlas.agent.dissemination.DisseminationModule;
 import java.net.UnknownHostException;
-import java.nio.file.Paths;
-import java.nio.file.Files;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -39,7 +37,6 @@ public class Main {
 	private static JSONObject config = null;
 	private static PathName targetZone = new PathName("/uw/violet07");
 	private static int socketPort = 42777;
-	private static String localContactIp = "127.0.0.1";
 	private static String pubKeyFilename = "public_key.der";
 	private static boolean testCommunicationModule = false;
 	private static ValueSet fallbackContacts = new ValueSet(TypePrimitive.CONTACT);
@@ -135,23 +132,12 @@ public class Main {
 		
 		if (config.has("socketPort")) 
 			socketPort = config.getInt("socketPort");
-		if (config.has("localContactIp"))
-			localContactIp = config.getString("localContactIp");
 		
 		config.put("name", targetZone.getName());
 		config.put("pubKeyFilename", pubKeyFilename);
-		config.put("localContacts", ZMIJSONSerializer.valueToJSON(createLocalContacts()));
 	}
 	
 	public static ZMI createZmi() throws ParseException, UnknownHostException {
 		return ZMIHierarchyBuilder.createLeafNodeHierarchy(targetZone);
-	}
-	
-	public static ValueSet createLocalContacts() throws UnknownHostException {
-		InetAddress address = Inet4Address.getByName(localContactIp);
-		ValueContact contact = new ValueContact(targetZone, address, socketPort);
-		System.out.println("Local contact " + contact);
-		List<Value> list = Arrays.asList(new Value[]{contact});
- 		return new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT);
 	}
 }

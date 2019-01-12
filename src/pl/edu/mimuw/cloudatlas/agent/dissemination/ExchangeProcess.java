@@ -29,8 +29,8 @@ public class ExchangeProcess {
 		WAITING_FOR_SHUTDOWN,
 		FINISHED
 	}
+	private static final Random r = new Random();
 	private final ExchangeProcesConfig config;
-	private Random r = new Random();
 	private boolean initializedByMe;
 	private State state;
 	private long pid;
@@ -59,7 +59,8 @@ public class ExchangeProcess {
 	public static ExchangeProcess fromFirstMessage(DisseminationMessage msg, ExchangeProcesConfig config) {
 		switch (msg.type) {
 			case CALLBACK_START_NEW_EXCHANGE:
-				return new ExchangeProcess(true, msg.pid, config);
+				// Since this is cyclic callback msg we need to generate new pid.
+				return new ExchangeProcess(true, r.nextLong(), config);
 			case REMOTE_AGENT_DATA:
 				return new ExchangeProcess(false, msg.pid, config, msg);
 			default:
@@ -67,6 +68,10 @@ public class ExchangeProcess {
 		}
 	}
 
+	public long getPid() {
+		return pid;
+	}
+	
 	public void handleMsg(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
 		try {
 			if (initializedByMe) {
@@ -128,7 +133,7 @@ public class ExchangeProcess {
 							case CALLBACK_RESEND_DATA:
 								sendDataToRemote();
 								break;
-							case ACK:
+							case ACK_RECEIVED_REMOTE_DATA:
 								handleAck(msg);
 								break;
 						}
@@ -150,14 +155,13 @@ public class ExchangeProcess {
 	private void handleLocalDataAndSendRequest(DisseminationMessage msg) throws InterruptedException, TooManyTriesException {
 		state = State.WAITING_FOR_REMOTE_DATA;
 		selectNodeForExchange(msg.data);
-		//System.out.println("Selected node " + remoteName);
 		prepareRemoteDataMsg(msg.data);
 		sendDataToRemote();
 	}
 
 	private void sendDataToRemote() throws InterruptedException, TooManyTriesException {
 		if (retryCnt >= config.maxRetry) {
-			throw new TooManyTriesException("Resent message to the remote host maximum number of times: " + retryCnt + " and did not receive response.");
+			throw new TooManyTriesException("Resent message to the remote host " + remoteName + " maximum number of times: " + retryCnt + " and did not receive response.");
 		}
 		retryCnt++;
 		setupTimeoutCallback();

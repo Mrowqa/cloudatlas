@@ -8,6 +8,10 @@ package pl.edu.mimuw.cloudatlas.agent;
 import pl.edu.mimuw.cloudatlas.agent.dissemination.AgentData;
 import pl.edu.mimuw.cloudatlas.agent.dissemination.DisseminationMessage;
 import java.io.ByteArrayInputStream;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.util.List;
 import java.util.Map.Entry;
@@ -35,6 +39,7 @@ import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.Query;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
+import pl.edu.mimuw.cloudatlas.model.TypeWrapper;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ValueContact;
@@ -69,10 +74,10 @@ public class ZMIModule extends Thread implements Module {
 	private int contactsPerNode = 2;
 	private ModulesHandler modulesHandler;
 
-	public static ZMIModule createModule(ZMI zmi, JSONObject config) {
+	public static ZMIModule createModule(ZMI zmi, JSONObject config) throws SocketException, UnknownHostException {
 		PathName name = new PathName(config.getString("name"));
 		String pubKeyFilename = config.getString("pubKeyFilename");
-		ValueSet localContacts = (ValueSet)ZMIJSONSerializer.JSONToValue(config.getJSONObject("localContacts"));
+		ValueSet localContacts = createLocalContactsSet(name, config);
 		ValueSet fallbackContacts = (ValueSet)ZMIJSONSerializer.JSONToValue(config.getJSONObject("fallbackContacts"));
 		
 		ZMIModule module = new ZMIModule(zmi, name, fallbackContacts, pubKeyFilename);
@@ -103,6 +108,19 @@ public class ZMIModule extends Thread implements Module {
 		return module;
 	}
 	
+	private static ValueSet createLocalContactsSet(PathName name, JSONObject config) throws SocketException, UnknownHostException {
+		// Detect prefered outbound IP: https://stackoverflow.com/questions/9481865/getting-the-ip-address-of-the-current-machine-using-java
+		DatagramSocket socket = new DatagramSocket();
+		socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
+		InetAddress ip = socket.getLocalAddress();
+		int port = config.getInt("socketPort");
+		
+		ValueContact contactRaw = new ValueContact(name, ip, port);
+		ValueAndFreshness contact = ValueAndFreshness.freshValue(contactRaw);
+		List<Value> list = Arrays.asList(new Value[]{contact});
+		return new ValueSet(new HashSet<>(list), new TypeWrapper(TypePrimitive.CONTACT));
+	}
+	
 	@Override
 	public void setModulesHandler(ModulesHandler modulesHandler) {
 		this.modulesHandler = modulesHandler;
@@ -118,7 +136,7 @@ public class ZMIModule extends Thread implements Module {
 		messages.put((ZMIMessage) message);
 	}
 
-	public ZMIModule(ZMI zmi, PathName name, ValueSet fallbackContacts, String pubKeyFilename) {
+	private ZMIModule(ZMI zmi, PathName name, ValueSet fallbackContacts, String pubKeyFilename) {
 		this.messages = new LinkedBlockingQueue<>();
 		this.random = new Random();
 		this.queries = new HashMap<>();
@@ -135,18 +153,22 @@ public class ZMIModule extends Thread implements Module {
 
 	@Override
 	public void run() {
-		scheduleQueriesExecution();
-		scheduleRemoveOutdatedZonesEvent();
+		try {
+			scheduleQueriesExecutionRecurringEvent();
+			scheduleRemoveOutdatedZonesRecurringEvent();
+		} catch (Exception ex) {
+			throw new RuntimeException("Failed to schedule cyclic ZMI actions. Occured exception: " + ex);
+		}
 		while (true) {
 			try {
 				ZMIMessage message = messages.take();
 				if (message.type == ZMIMessage.Type.EXECUTE_QUERIES) {
+					updateOurContactTimestamp();
 					try {
 						executeQueries();
 					} catch(Exception ex) {
 						Logger.getLogger(ZMIModule.class.getName()).log(Level.FINEST, "Queries exectued.");
 					}
-					scheduleQueriesExecution();
 					continue;
 				}
 				if (message.type == ZMIMessage.Type.GET_LOCAL_AGENT_DATA) {
@@ -160,7 +182,6 @@ public class ZMIModule extends Thread implements Module {
 				}
 				if (message.type == ZMIMessage.Type.REMOVE_OUTDATED_ZONES) {
 					removeOutdatedZones();
-					scheduleRemoveOutdatedZonesEvent();
 					continue;
 				}
 					
@@ -296,9 +317,10 @@ public class ZMIModule extends Thread implements Module {
 
 	private void executeQueries(ZMI zmi) throws Exception {
 		if (!zmi.getSons().isEmpty()) {
-			for (ZMI son : zmi.getSons()) {
-				executeQueries(son);
-			}
+			for (ZMI son : zmi.getSons())
+				if (name.startsWith(son.getPathName()))
+					executeQueries(son);
+			zmi.updateFreshness();
 			Interpreter interpreter = new Interpreter(zmi);
 			for (Query query : queries.values()) {
 				String queryText = query.getText();
@@ -379,15 +401,11 @@ public class ZMIModule extends Thread implements Module {
 		zmi.removeSons();
 	}
 		
-	private void scheduleQueriesExecution() {
+	private void scheduleQueriesExecutionRecurringEvent() throws InterruptedException {
 		long id = random.nextLong();
 		ZMIMessage callbackMessage = ZMIMessage.executeQueries();
-		TimerMessage message = TimerMessage.scheduleOneTimeCallback(id, queryExecutionInterval, callbackMessage);
-		try {
-			modulesHandler.enqueue(message);
-		} catch (InterruptedException ex) {
-			Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
-		}
+		TimerMessage message = TimerMessage.scheduleCyclicCallback(id, queryExecutionInterval, callbackMessage);
+		modulesHandler.enqueue(message);
 	}
 
 	private boolean queryInstalled(Attribute attribute) {
@@ -465,14 +483,10 @@ public class ZMIModule extends Thread implements Module {
 		father.addSon(remoteZmi);
 	}
 	
-	private void scheduleRemoveOutdatedZonesEvent() {
+	private void scheduleRemoveOutdatedZonesRecurringEvent() throws InterruptedException {
 		ZMIMessage innerMsg = ZMIMessage.removeOutdatedZones();
 		TimerMessage msg = TimerMessage.scheduleOneTimeCallback(random.nextLong(), removeOutdatedZonesInterval, innerMsg);
-		try {
-			modulesHandler.enqueue(msg);
-		} catch (InterruptedException ex) {
-			Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
-		}
+		modulesHandler.enqueue(msg);
 	}
 	
 	private void removeOutdatedZones() {
@@ -503,13 +517,16 @@ public class ZMIModule extends Thread implements Module {
 		if (contacts == null)
 			return;
 		for (Value contact : contacts) {
-			if (contact instanceof ValueContact) {
-				addZMINodeFromContact(zmi, (ValueContact)contact);
+			if (contact instanceof ValueAndFreshness) {
+				ValueAndFreshness contactWithTs = (ValueAndFreshness)contact;
+				addZMINodeFromContact(zmi, contactWithTs);
 			}
 		}
 	}
 	
-	private void addZMINodeFromContact(ZMI zmi, ValueContact contact) {
+	private void addZMINodeFromContact(ZMI zmi, ValueAndFreshness contactWithTs) {
+		ValueContact contact = (ValueContact)contactWithTs.getValue();
+		ValueTime freshness = contactWithTs.getFreshness();
 		List<String> components = contact.getName().getComponents();
 		for (int i = components.size() - 1; i >= 1; i--) {
 			PathName fatherName = new PathName(components.subList(0, i));
@@ -521,13 +538,27 @@ public class ZMIModule extends Thread implements Module {
 			ZMI node = findZone(zmi, nodeName);
 			if (node == null) {
 				node = new ZMI(father, nodeName.getSingletonName());
+				node.setFreshness(freshness);
 				father.addSon(node);
+
 				
-				List<Value> list = Arrays.asList(new Value[]{contact});
-				ValueSet contacts = new ValueSet (new HashSet<>(list), TypePrimitive.CONTACT);
+				List<Value> list = Arrays.asList(new Value[]{contactWithTs});
+				ValueSet contacts = new ValueSet (new HashSet<>(list), new TypeWrapper(TypePrimitive.CONTACT));
 				node.getAttributes().add("contacts", contacts);
 				break;
 			}
 		}
+	}
+	
+	private void updateOurContactTimestamp() {
+		ZMI zone = findZone(zmi, name);
+		ValueSet contacts = (ValueSet)zone.getAttributes().get("contacts");
+		ValueTime freshness = ValueTime.now();
+		ValueSet updated = new ValueSet(new TypeWrapper(TypePrimitive.CONTACT));
+		for (Value contact : contacts) {
+			ValueAndFreshness contactWithTs = (ValueAndFreshness)contact;
+			updated.add(new ValueAndFreshness(contactWithTs.getValue(), freshness));
+		}
+		zone.getAttributes().addOrChange("contacts", updated);
 	}
 }

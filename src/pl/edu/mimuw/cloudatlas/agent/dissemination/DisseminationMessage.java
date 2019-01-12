@@ -25,7 +25,7 @@ public class DisseminationMessage extends ModuleMessage implements NetworkSendab
 	public enum Type {
 		CALLBACK_START_NEW_EXCHANGE, LOCAL_AGENT_DATA, 
 		REMOTE_AGENT_DATA, CALLBACK_RESEND_DATA,
-		ACK, CALLBACK_SHUTDOWN_EXCHANGE
+		ACK_RECEIVED_REMOTE_DATA, CALLBACK_SHUTDOWN_EXCHANGE
 	}
 	private CommunicationInfo info;
 	public Type type;
@@ -67,7 +67,7 @@ public class DisseminationMessage extends ModuleMessage implements NetworkSendab
 	}
 	
 	public static DisseminationMessage ack(long msgId, CommunicationInfo info) {
-		DisseminationMessage msg = new DisseminationMessage(Type.ACK, msgId);
+		DisseminationMessage msg = new DisseminationMessage(Type.ACK_RECEIVED_REMOTE_DATA, msgId);
 		msg.info = info;
 		return msg;
 	}

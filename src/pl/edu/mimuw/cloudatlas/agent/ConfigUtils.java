@@ -11,6 +11,13 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import org.json.JSONObject;
+import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
+import pl.edu.mimuw.cloudatlas.model.TypeWrapper;
+import pl.edu.mimuw.cloudatlas.model.Value;
+import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
+import pl.edu.mimuw.cloudatlas.model.ValueSet;
+import pl.edu.mimuw.cloudatlas.model.ValueTime;
+import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
 
 /**
  *
@@ -47,5 +54,14 @@ public class ConfigUtils {
 			default:
 				throw new IllegalArgumentException("Invalid duration unit, got " + durationUnit + " allowed h|m|s.");
 		}
+	}
+
+	public static ValueSet constructContactsWithFreshnessInfo(String name, JSONObject config) {
+		ValueSet contacts = (ValueSet)ZMIJSONSerializer.JSONToValue(config.getJSONObject(name));
+		ValueSet contactsWithTs = new ValueSet(new TypeWrapper(TypePrimitive.CONTACT));
+		ValueTime freshness = ValueTime.now();
+		for (Value contact : contacts.getValue()) 
+			contactsWithTs.add(new ValueAndFreshness(contact, freshness));
+		return contactsWithTs;
 	}
 }

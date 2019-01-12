@@ -26,58 +26,49 @@ package pl.edu.mimuw.cloudatlas.model;
 
 import java.io.Serializable;
 
+
 /**
- * A type of a value that may be stored as an attribute.
+ * Represents a collection type with specified element type.
+ * 
+ * @see TypePrimitve
  */
-public abstract class Type implements Serializable {
-	/**
-	 * A primary type. This is a characteristic that every type has. It can be extended: for instance a collection may
-	 * be parameterized with a type of stored values.
-	 */
-	public static enum PrimaryType implements Serializable {
-		BOOLEAN, CONTACT, DOUBLE, DURATION, INT, LIST, NULL, SET, STRING, TIME, WRAPPER
-	}
-	
-	private final PrimaryType primaryType;
+public class TypeWrapper extends Type implements Serializable {
+	private final Type nestedType;
 	
 	/**
-	 * Creates a <code>Type</code> object with a given primary type.
+	 * Creates a new collection type.
 	 * 
-	 * @param primaryType a primary type for this type
+	 * @param nestedType a type of an element of this wrapper; may be a complex type (for instance
+	 * <code>TypeCollection</code>)
 	 */
-	public Type(PrimaryType primaryType) {
-		this.primaryType = primaryType;
+	public TypeWrapper(Type nestedType) {
+		super(Type.PrimaryType.WRAPPER);
+		this.nestedType = nestedType;
 	}
 	
 	/**
-	 * Returns a primary type of this type.
+	 * Gets a type of element stored in this wrapper.
 	 * 
-	 * @return a primary type
+	 * @return type of element in this wrapper
 	 */
-	public PrimaryType getPrimaryType() {
-		return primaryType;
+	public Type getNestedType() {
+		return nestedType;
 	}
 	
 	/**
-	 * Indicates whether this type can be implicitly "cast" to given one and vice verse. This is introduced to deal with
-	 * null values. In practice, two types are compatible either if they are the same or if one them is a special
-	 * "null type".
+	 * Returns a friendly textual representation of this type.
 	 * 
-	 * @param type a type to check
-	 * @return whether two types are compatible with each other
-	 * @see TypePrimitive#NULL
-	 * @see ValueNull
+	 * @return a textual representation of this type
 	 */
+	@Override
+	public String toString() {
+		return getPrimaryType().toString() + " of (" + nestedType.toString() + ")";
+	}
+	
+	@Override
 	public boolean isCompatible(Type type) {
-		return getPrimaryType() == PrimaryType.NULL || type.getPrimaryType() == PrimaryType.NULL;
-	}
-	
-	/**
-	 * Indicates whether this type represents a collection.
-	 * 
-	 * @return true for collections, false otherwise
-	 */
-	public boolean isCollection() {
-		return false;
+		return super.isCompatible(type)
+				|| (Type.PrimaryType.WRAPPER == type.getPrimaryType() && nestedType
+						.isCompatible(((TypeWrapper)type).nestedType));
 	}
 }
