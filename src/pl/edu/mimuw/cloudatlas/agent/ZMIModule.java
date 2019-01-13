@@ -322,11 +322,11 @@ public class ZMIModule extends Thread implements Module {
 	}
 
 	private void executeQueries(ZMI zmi) throws Exception {
+		zmi.updateFreshness();
 		if (!zmi.getSons().isEmpty()) {
 			for (ZMI son : zmi.getSons())
 				if (name.startsWith(son.getPathName()))
 					executeQueries(son);
-			zmi.updateFreshness();
 			Interpreter interpreter = new Interpreter(zmi);
 			for (Query query : queries.values()) {
 				String queryText = query.getText();
@@ -498,13 +498,17 @@ public class ZMIModule extends Thread implements Module {
 	
 	private void scheduleRemoveOutdatedZonesRecurringEvent() throws InterruptedException {
 		ZMIMessage innerMsg = ZMIMessage.removeOutdatedZones();
-		TimerMessage msg = TimerMessage.scheduleOneTimeCallback(random.nextLong(), removeOutdatedZonesInterval, innerMsg);
+		TimerMessage msg = TimerMessage.scheduleRecurringCallback(random.nextLong(), removeOutdatedZonesInterval, innerMsg);
 		modulesHandler.enqueue(msg);
 	}
 	
 	private void removeOutdatedZones() {
-		ValueTime minTime = (ValueTime)ValueTime.now().subtract(new ValueDuration(0, zoneOutdatedDuration.toMillis()));
+		ValueTime minTime = getZoneOutdatedThreshold();
 		removeOutdatedZones(zmi, minTime);
+	}
+	
+	private ValueTime getZoneOutdatedThreshold() {
+		return (ValueTime)ValueTime.now().subtract(new ValueDuration(0, zoneOutdatedDuration.toMillis()));
 	}
 
 	private void removeOutdatedZones(ZMI zmi, ValueTime minTime) {
@@ -532,7 +536,10 @@ public class ZMIModule extends Thread implements Module {
 		for (Value contact : contacts) {
 			if (contact instanceof ValueAndFreshness) {
 				ValueAndFreshness contactWithTs = (ValueAndFreshness)contact;
-				addZMINodeFromContact(zmi, contactWithTs);
+				// Create ZMI node from contact only if contact is fresh enough.
+				ValueTime minTime = getZoneOutdatedThreshold();
+				if (minTime.isLowerThan(contactWithTs.getFreshness()).getValue())
+					addZMINodeFromContact(zmi, contactWithTs);
 			}
 		}
 	}
