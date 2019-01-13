@@ -187,7 +187,7 @@ public class ZMIModule extends Thread implements Module {
 					continue;
 				}
 				if (message.type == ZMIMessage.Type.REMOVE_OUTDATED_ZONES) {
-					removeOutdatedZones();
+					removeOutdatedZones(zmi);
 					continue;
 				}
 					
@@ -453,15 +453,20 @@ public class ZMIModule extends Thread implements Module {
 			
 			queries.merge(entry.getKey(), remoteQuery, (q1, q2) -> q1.getFresher(q2));
 		}
-		updateWithRemoteData(zmi, remoteData.getZmi());
+		updateZmiWithRemoteData(zmi, remoteData.getZmi());
 	}
 	
-	private void updateWithRemoteData(ZMI zmi, ZMI remoteZmi) {
+	private void updateZmiWithRemoteData(ZMI zmi, ZMI remoteZmi) {
 		ValueSet contacts = null;
 		for (ZMI remoteSon : remoteZmi.getSons()) {
+			// Add remote son if does not exist locally and is not outdated.
 			ZMI localSon = zmi.getSonBySingletonName(remoteSon.getPathName().getSingletonName());
 			if (localSon == null) {
-				zmi.addSon(remoteSon);
+				if (!isZmiOutdated(remoteSon.getFreshness())) {
+					Logger.getLogger(ZMIModule.class.getName()).log(Level.INFO, "Adding zone from gossiping {0}", new Object[]{remoteSon.getPathName()});
+					zmi.addSon(remoteSon);
+					remoteSon.setFather(zmi);
+				}
 			} else {
 				if (name.startsWith(remoteSon.getPathName()))
 					contacts = (ValueSet)remoteSon.getAttributes().getOrNull("contacts");
@@ -481,19 +486,9 @@ public class ZMIModule extends Thread implements Module {
 		
 		ZMI nextRemoteZmi = remoteZmi.getSonBySingletonName(nextZmi.getPathName().getSingletonName());
 		if (nextRemoteZmi != null)
-			updateWithRemoteData(nextZmi, nextRemoteZmi);
+			updateZmiWithRemoteData(nextZmi, nextRemoteZmi);
 		
 		addZMINodesFromContacts(contacts);
-	}
-
-	private void addZMINode(ZMI remoteZmi) {
-		PathName fatherPath = remoteZmi.getPathName().levelUp();
-		ZMI father = findZone(zmi, fatherPath);
-		if (father == null) {
-			throw new IllegalArgumentException(
-					"You can only add sons of existing nodes");
-		}
-		father.addSon(remoteZmi);
 	}
 	
 	private void scheduleRemoveOutdatedZonesRecurringEvent() throws InterruptedException {
@@ -502,22 +497,13 @@ public class ZMIModule extends Thread implements Module {
 		modulesHandler.enqueue(msg);
 	}
 	
-	private void removeOutdatedZones() {
-		ValueTime minTime = getZoneOutdatedThreshold();
-		removeOutdatedZones(zmi, minTime);
-	}
-	
-	private ValueTime getZoneOutdatedThreshold() {
-		return (ValueTime)ValueTime.now().subtract(new ValueDuration(0, zoneOutdatedDuration.toMillis()));
-	}
-
-	private void removeOutdatedZones(ZMI zmi, ValueTime minTime) {
+	private void removeOutdatedZones(ZMI zmi) {
 		List<ZMI> toRemove = new ArrayList<>();
 		ZMI nextZmi = null;
 		for (ZMI son : zmi.getSons()) {
 			if (name.startsWith(son.getPathName())) {
 				nextZmi = son;
-			} else if (son.getFreshness().isLowerThan(minTime).getValue()) {
+			} else if (isZmiOutdated(son.getFreshness())) {
 				toRemove.add(son);
 			}
 		}
@@ -526,7 +512,7 @@ public class ZMIModule extends Thread implements Module {
 			zmi.removeSon(son);
 		}
 		if (nextZmi != null) {
-			removeOutdatedZones(nextZmi, minTime);
+			removeOutdatedZones(nextZmi);
 		}
 	}
 
@@ -537,8 +523,7 @@ public class ZMIModule extends Thread implements Module {
 			if (contact instanceof ValueAndFreshness) {
 				ValueAndFreshness contactWithTs = (ValueAndFreshness)contact;
 				// Create ZMI node from contact only if contact is fresh enough.
-				ValueTime minTime = getZoneOutdatedThreshold();
-				if (minTime.isLowerThan(contactWithTs.getFreshness()).getValue())
+				if (!isZmiOutdated(contactWithTs.getFreshness()))
 					addZMINodeFromContact(zmi, contactWithTs);
 			}
 		}
@@ -557,17 +542,24 @@ public class ZMIModule extends Thread implements Module {
 			PathName nodeName = new PathName(components.subList(0, i+1));
 			ZMI node = findZone(zmi, nodeName);
 			if (node == null) {
-				node = new ZMI(father, nodeName.getSingletonName());
-				node.setFreshness(freshness);
+				node = new ZMI(father, nodeName.getSingletonName(), freshness);
 				father.addSon(node);
+				Logger.getLogger(ZMIModule.class.getName()).log(Level.INFO, "Adding zone from contacts attribute {0}", new Object[]{node.getPathName()});
 
-				
 				List<Value> list = Arrays.asList(new Value[]{contactWithTs});
 				ValueSet contacts = new ValueSet (new HashSet<>(list), new TypeWrapper(TypePrimitive.CONTACT));
 				node.getAttributes().add("contacts", contacts);
 				break;
 			}
 		}
+	}
+	
+	private boolean isZmiOutdated(ValueTime zmiFreshness) {
+		return zmiFreshness.isLowerThan(getZoneOutdatedThreshold()).getValue();
+	}
+	
+	private ValueTime getZoneOutdatedThreshold() {
+		return (ValueTime)ValueTime.now().subtract(new ValueDuration(0, zoneOutdatedDuration.toMillis()));
 	}
 	
 	private void updateOurContactTimestamp() {
