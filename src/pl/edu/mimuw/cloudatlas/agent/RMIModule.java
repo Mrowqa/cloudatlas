@@ -12,11 +12,16 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
+import pl.edu.mimuw.cloudatlas.model.Query;
+import pl.edu.mimuw.cloudatlas.model.Type;
+import pl.edu.mimuw.cloudatlas.model.TypeCollection;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
+import pl.edu.mimuw.cloudatlas.rmiutils.RmiCallException;
 
 /**
  *
@@ -46,8 +51,10 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	private final MessagesCollection messages;
 	private ModulesHandler modulesHandler;
 	volatile AtomicLong nextPid;
+	private final String zoneName;
 
-	public RMIModule() {
+	public RMIModule(String name) {
+		this.zoneName = name;
 		this.nextPid = new AtomicLong(0L);
 		this.messages = new MessagesCollection();
 	}
@@ -72,7 +79,7 @@ public class RMIModule implements CloudAtlasInterface, Module {
 		try {
 			CloudAtlasInterface stub = (CloudAtlasInterface) UnicastRemoteObject.exportObject(this, 0);
 			Registry registry = LocateRegistry.getRegistry();
-			registry.rebind("CloudAtlas", stub);
+			registry.rebind("CloudAtlas" + zoneName, stub);
 		}
 		catch (RemoteException ex) { // will be caught in main
 			throw new RuntimeException(ex);
@@ -86,7 +93,7 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	@Override
 	public ZMI getWholeZMI() throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_ZMI);
+		ZMIMessage request = ZMIMessage.getZmi(pid);
 		RMIMessage response = waitForResponseOrError(request);
 		return response.zmi;
 	}
@@ -94,7 +101,7 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	@Override
 	public ValueList getZones() throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_ZONES);
+		ZMIMessage request = ZMIMessage.getZones(pid);
 		RMIMessage response = waitForResponseOrError(request);
 		return (ValueList)response.value1;
 	}
@@ -102,7 +109,7 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	@Override
 	public AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_ZONE_ATTRIBUTES, zone);
+		ZMIMessage request = ZMIMessage.getZoneAttributes(pid, zone);
 		RMIMessage response = waitForResponseOrError(request);
 		return response.attributes;
 	}
@@ -110,35 +117,69 @@ public class RMIModule implements CloudAtlasInterface, Module {
 	@Override
 	public void installQueries(ValueList queryNames, ValueList queries, ValueList signatures) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.INSTALL_QUERIES, queryNames, queries, signatures);
+		checkElementType((TypeCollection) queryNames.getType(), Type.PrimaryType.STRING);
+		checkElementType((TypeCollection) queries.getType(), Type.PrimaryType.STRING);
+		checkElementType((TypeCollection) signatures.getType(), Type.PrimaryType.STRING);
+		if (queryNames.size() != queries.size() || queries.size() != signatures.size()) {
+			throw new RmiCallException("QueryNames, queries and signatures must have equal size " + queryNames.size() + " vs " + queries.size() + " vs " + signatures.size());
+		}
+		if (queryNames.size() != 1) {
+			throw new RmiCallException("You can install only one query at once.");
+		}
+		
+		String queryText = ((ValueString)queries.get(0)).getValue();
+		String querySignature = ((ValueString)signatures.get(0)).getValue();
+		ZMIMessage request = ZMIMessage.installQuery(pid, queryNames.get(0), queryText, querySignature);
 		waitForResponseOrError(request);
 	}
 
 	@Override
 	public void uninstallQueries(ValueList queryNames, ValueList signatures) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.UNINSTALL_QUERIES, queryNames, signatures);
+		checkElementType((TypeCollection) queryNames.getType(), Type.PrimaryType.STRING);
+		checkElementType((TypeCollection) signatures.getType(), Type.PrimaryType.STRING);
+		if (queryNames.size() != signatures.size()) {
+			throw new RmiCallException("QueryNames and signatures must have equal size " + queryNames.size() + " vs " + signatures.size());
+		}
+		if (queryNames.size() != 1) {
+			throw new RmiCallException("You can uninstall only one query at once.");
+		}
+		
+		String querySignature = ((ValueString)signatures.get(0)).getValue();
+		ZMIMessage request = ZMIMessage.uninstallQuery(pid, queryNames.get(0), querySignature);
 		waitForResponseOrError(request);
+	}
+	
+	@Override
+	public HashMap<Attribute, Query> getAllQueries() throws RemoteException {
+		long pid = nextPid.getAndIncrement();
+		ZMIMessage request = ZMIMessage.getAllQueries(pid);
+		RMIMessage response = waitForResponseOrError(request);
+		return response.queries;
 	}
 
 	@Override
 	public void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.SET_ZONE_ATTRIBUTES, zone, attributes);
+		ZMIMessage request = ZMIMessage.setZoneAttributes(pid, zone, attributes);
 		waitForResponseOrError(request);
 	}
 
 	@Override
 	public void setFallbackContacts(ValueSet contacts) throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.SET_FALLBACK_CONTACTS, contacts);
+		if (contacts.isNull()) {
+			throw new IllegalArgumentException("Fallback contacts set can't be null");
+		}
+		checkElementType((TypeCollection) contacts.getType(), Type.PrimaryType.CONTACT);
+		ZMIMessage request = ZMIMessage.setFallbackContacts(pid, contacts);
 		waitForResponseOrError(request);
 	}
 	
 	@Override
 	public ValueSet getFallbackContacts() throws RemoteException {
 		long pid = nextPid.getAndIncrement();
-		ZMIMessage request = new ZMIMessage(pid, ZMIMessage.Type.GET_FALLBACK_CONTACTS);
+		ZMIMessage request = ZMIMessage.getFallbackContacts(pid);
 		RMIMessage response = waitForResponseOrError(request);
 		return (ValueSet)response.value1;
 	}
@@ -153,11 +194,18 @@ public class RMIModule implements CloudAtlasInterface, Module {
 			modulesHandler.enqueue(request);
 			response = messages.waitAndPop(request.pid);
 			if (response.type == RMIMessage.Type.ERROR) {
-				throw new RemoteException(response.errorMessage);
+				throw new RmiCallException(response.errorMessage);
 			}
 		} catch (InterruptedException ex) {
-			throw new RemoteException("Exception occured while fetching the response " + ex.getMessage());
+			throw new RmiCallException("Exception occured while fetching the response " + ex.getMessage());
 		}
 		return response;
+	}
+	
+	private void checkElementType(TypeCollection collectionType, Type.PrimaryType expectedType) {
+		Type.PrimaryType actualType = collectionType.getElementType().getPrimaryType();
+		if (actualType != expectedType) {
+			throw new IllegalArgumentException("Illegal type, got: " + actualType + " expected " + expectedType);
+		}
 	}
 }

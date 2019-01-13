@@ -18,11 +18,19 @@ import java.util.List;
  * @author pawel
  */
 public class ZMIHierarchyBuilder {
-	private static ValueContact createContact(String path, byte ip1, byte ip2, byte ip3, byte ip4)
+	public static ValueContact createContact(String path, byte ip1, byte ip2, byte ip3, byte ip4)
 			throws UnknownHostException {
 		return new ValueContact(new PathName(path), InetAddress.getByAddress(new byte[] {
 			ip1, ip2, ip3, ip4
 		}));
+	}
+	
+	public static ValueAndFreshness createContactWithTimestamp(String path, byte ip1, byte ip2, byte ip3, byte ip4)
+			throws UnknownHostException {
+		ValueContact value = new ValueContact(new PathName(path), InetAddress.getByAddress(new byte[] {
+			ip1, ip2, ip3, ip4
+		}));
+		return ValueAndFreshness.freshValue(value);
 	}
 	
 	public static ZMI createTestHierarchy() throws ParseException, UnknownHostException {
@@ -172,19 +180,74 @@ public class ZMIHierarchyBuilder {
 		return root;
 	}
 
+	public static ZMI createHierarchyForNodeSelectionTest() throws ParseException, UnknownHostException {
+		ValueContact violet07Contact = createContact("/uw/violet07", (byte)1, (byte)1, (byte)1, (byte)10);
+		ValueContact khaki13Contact = createContact("/uw/khaki13", (byte)2, (byte)1, (byte)1, (byte)38);
+		ValueContact khaki31Contact = createContact("/uw/khaki31", (byte)3, (byte)1, (byte)1, (byte)39);
+		ValueContact whatever01Contact = createContact("/pjwstk/whatever01", (byte)4, (byte)1, (byte)1, (byte)1);
+		ValueContact whatever02Contact = createContact("/pjwstk/whatever02", (byte)5, (byte)1, (byte)1, (byte)1);		
+			
+		List<Value> list;
+		
+		ZMI root = new ZMI();
+		root.getAttributes().add("level", new ValueInt(0l));
+		root.getAttributes().add("contacts", new ValueSet(TypePrimitive.CONTACT));
+		
+		ZMI uw = new ZMI(root, "uw");
+		root.addSon(uw);
+		uw.getAttributes().add("level", new ValueInt(1l));
+		uw.getAttributes().add("owner", new ValueString("/uw/violet07"));
+		list = Arrays.asList(new Value[]{violet07Contact});
+		uw.getAttributes().add("contacts", new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT));
+	
+		ZMI pjwstk = new ZMI(root, "pjwstk");
+		root.addSon(pjwstk);
+		list = Arrays.asList(new Value[]{whatever01Contact, whatever02Contact});
+		pjwstk.getAttributes().add("level", new ValueInt(1l));
+		pjwstk.getAttributes().add("contacts", new ValueSet(new HashSet<>(list),TypePrimitive.CONTACT));
+		
+		ZMI violet07 = new ZMI(uw, "violet07");
+		uw.addSon(violet07);
+		violet07.getAttributes().add("level", new ValueInt(2l));
+		list = Arrays.asList(new Value[] {
+			violet07Contact
+		});
+		violet07.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		
+		ZMI khaki31 = new ZMI(uw, "khaki31");
+		uw.addSon(khaki31);
+		khaki31.getAttributes().add("level", new ValueInt(2l));
+		khaki31.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		list = Arrays.asList(new Value[] {
+			khaki31Contact
+		});
+		
+		ZMI khaki13 = new ZMI(uw, "khaki13");
+		uw.addSon(khaki13);
+		khaki13.getAttributes().add("level", new ValueInt(2l));
+		list = Arrays.asList(new Value[] {
+			khaki13Contact,
+		});
+		khaki13.getAttributes().add("contacts", new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT));
+
+
+		return root;
+	}
+	
 	public static ZMI createDefaultHierarchy() throws ParseException, UnknownHostException {
 		ZMI root;
-		ValueContact uw1 = createContact("/uw1", (byte)10, (byte)1, (byte)1, (byte)10);
-		ValueContact uw1a = createContact("/uw1a", (byte)10, (byte)1, (byte)1, (byte)10);
-		ValueContact uw1b = createContact("/uw1b", (byte)10, (byte)1, (byte)1, (byte)10);
-		ValueContact uw1c = createContact("/uw1c", (byte)10, (byte)1, (byte)1, (byte)10);
+		Value uw1 = createContactWithTimestamp("/uw1", (byte)10, (byte)1, (byte)1, (byte)10);
+		Value uw1a = createContactWithTimestamp("/uw1a", (byte)10, (byte)1, (byte)1, (byte)10);
+		Value uw1b = createContactWithTimestamp("/uw1b", (byte)10, (byte)1, (byte)1, (byte)10);
+		Value uw1c = createContactWithTimestamp("/uw1c", (byte)10, (byte)1, (byte)1, (byte)10);
 				
-		ValueContact uw2a = createContact("/uw2a", (byte)10, (byte)1, (byte)1, (byte)10);
-		ValueContact uw3a = createContact("/uw3a", (byte)10, (byte)1, (byte)1, (byte)10);
-		ValueContact uw3b = createContact("/uw3b", (byte)10, (byte)1, (byte)1, (byte)10);
+		Value uw2a = createContactWithTimestamp("/uw2a", (byte)10, (byte)1, (byte)1, (byte)10);
+		Value uw3a = createContactWithTimestamp("/uw3a", (byte)10, (byte)1, (byte)1, (byte)10);
+		Value uw3b = createContactWithTimestamp("/uw3b", (byte)10, (byte)1, (byte)1, (byte)10);
 		
-		ValueContact pj1 = createContact("/pj1", (byte)10, (byte)1, (byte)1, (byte)10);
-		ValueContact pj2 = createContact("/pj2", (byte)10, (byte)1, (byte)1, (byte)10);
+		Value pj1 = createContactWithTimestamp("/pj1", (byte)10, (byte)1, (byte)1, (byte)10);
+		Value pj2 = createContactWithTimestamp("/pj2", (byte)10, (byte)1, (byte)1, (byte)10);
+		Type contactType = new TypeWrapper(TypePrimitive.CONTACT);
 		
 		List<Value> list;
 				
@@ -207,12 +270,12 @@ public class ZMIHierarchyBuilder {
 		list = Arrays.asList(new Value[] {
 			uw1a, uw1b, uw1c
 		});
-		violet07.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		violet07.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), contactType));
 		violet07.getAttributes().add("cardinality", new ValueInt(1l));
 		list = Arrays.asList(new Value[] {
 			uw1,
 		});
-		violet07.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		violet07.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), contactType));
 		violet07.getAttributes().add("creation", new ValueTime("2011/11/09 20:8:13.123"));
 		violet07.getAttributes().add("cpu_usage", new ValueDouble(0.9));
 		violet07.getAttributes().add("num_cores", new ValueInt(3l));
@@ -232,12 +295,12 @@ public class ZMIHierarchyBuilder {
 		list = Arrays.asList(new Value[] {
 			uw2a
 		});
-		khaki31.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		khaki31.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), contactType));
 		khaki31.getAttributes().add("cardinality", new ValueInt(1l));
 		list = Arrays.asList(new Value[] {
 			uw2a
 		});
-		khaki31.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		khaki31.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), contactType));
 		khaki31.getAttributes().add("creation", new ValueTime("2011/11/09 20:12:13.123"));
 		khaki31.getAttributes().add("cpu_usage", new ValueDouble(null));
 		khaki31.getAttributes().add("num_cores", new ValueInt(3l));
@@ -257,12 +320,12 @@ public class ZMIHierarchyBuilder {
 		list = Arrays.asList(new Value[] {
 			uw3a, uw3b
 		});
-		khaki13.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		khaki13.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), contactType));
 		khaki13.getAttributes().add("cardinality", new ValueInt(1l));
 		list = Arrays.asList(new Value[] {
 			uw3b
 		});
-		khaki13.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		khaki13.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), contactType));
 		khaki13.getAttributes().add("creation", new ValueTime((Long)null));
 		khaki13.getAttributes().add("cpu_usage", new ValueDouble(0.1));
 		khaki13.getAttributes().add("num_cores", new ValueInt(null));
@@ -280,12 +343,12 @@ public class ZMIHierarchyBuilder {
 		list = Arrays.asList(new Value[] {
 			pj1
 		});
-		whatever01.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		whatever01.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), contactType));
 		whatever01.getAttributes().add("cardinality", new ValueInt(1l));
 		list = Arrays.asList(new Value[] {
 			pj1
 		});
-		whatever01.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		whatever01.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), contactType));
 		whatever01.getAttributes().add("creation", new ValueTime("2012/10/18 07:03:00.000"));
 		whatever01.getAttributes().add("cpu_usage", new ValueDouble(0.1));
 		whatever01.getAttributes().add("num_cores", new ValueInt(7l));
@@ -303,12 +366,12 @@ public class ZMIHierarchyBuilder {
 		list = Arrays.asList(new Value[] {
 			pj2
 		});
-		whatever02.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		whatever02.getAttributes().add("contacts", new ValueSet(new HashSet<Value>(list), contactType));
 		whatever02.getAttributes().add("cardinality", new ValueInt(1l));
 		list = Arrays.asList(new Value[] {
 			pj2
 		});
-		whatever02.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), TypePrimitive.CONTACT));
+		whatever02.getAttributes().add("members", new ValueSet(new HashSet<Value>(list), contactType));
 		whatever02.getAttributes().add("creation", new ValueTime("2012/10/18 07:04:00.000"));
 		whatever02.getAttributes().add("cpu_usage", new ValueDouble(0.4));
 		whatever02.getAttributes().add("num_cores", new ValueInt(13l));

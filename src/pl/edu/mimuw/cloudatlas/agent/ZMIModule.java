@@ -5,18 +5,29 @@
  */
 package pl.edu.mimuw.cloudatlas.agent;
 
+import pl.edu.mimuw.cloudatlas.agent.dissemination.AgentData;
+import pl.edu.mimuw.cloudatlas.agent.dissemination.DisseminationMessage;
 import java.io.ByteArrayInputStream;
+import java.net.DatagramSocket;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.rmi.RemoteException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import pl.edu.mimuw.cloudatlas.interpreter.AttributesExtractor;
 import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
 import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
@@ -27,15 +38,21 @@ import pl.edu.mimuw.cloudatlas.interpreter.query.parser;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
-import pl.edu.mimuw.cloudatlas.model.Type.PrimaryType;
-import pl.edu.mimuw.cloudatlas.model.TypeCollection;
+import pl.edu.mimuw.cloudatlas.model.Query;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
+import pl.edu.mimuw.cloudatlas.model.TypeWrapper;
 import pl.edu.mimuw.cloudatlas.model.Value;
+import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
+import pl.edu.mimuw.cloudatlas.model.ValueContact;
+import pl.edu.mimuw.cloudatlas.model.ValueDuration;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueNull;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
+import pl.edu.mimuw.cloudatlas.model.ValueTime;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
+import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
+import pl.edu.mimuw.cloudatlas.rmiutils.RmiCallException;
 import pl.edu.mimuw.cloudatlas.signer.QueryOperation;
 import pl.edu.mimuw.cloudatlas.signer.Signer;
 
@@ -45,13 +62,71 @@ import pl.edu.mimuw.cloudatlas.signer.Signer;
  */
 public class ZMIModule extends Thread implements Module {
 	private final LinkedBlockingQueue<ZMIMessage> messages;
-	private final ZMI zmi;
-	private final Duration queryExecutionInterval;
 	private final Random random;
+	private final ZMI zmi;
+	private final PathName name;
+	private final HashMap<Attribute, Query> queries;  // todo remember signatures; you can also patch webclient to display signatures -> basically you just change map type here, try to recompile, fix mismatching type errors, and try again :P
 	private final Signer signVerifier;
-	private ValueSet fallbackContacts;
+
+	private ValueAndFreshness fallbackContacts;
+	private Duration queryExecutionInterval = Duration.ofSeconds(5);
+	private Duration removeOutdatedZonesInterval = Duration.ofSeconds(60); // Interval between two events of removing outdated zones
+	private Duration zoneOutdatedDuration = Duration.ofSeconds(60); // Duration after a zone become outdated
+	private int contactsPerNode = 2;
 	private ModulesHandler modulesHandler;
 
+	public static ZMIModule createModule(ZMI zmi, JSONObject config) throws SocketException, UnknownHostException {
+		PathName name = new PathName(config.getString("name"));
+		String pubKeyFilename = config.getString("pubKeyFilename");
+		ValueSet localContacts = createLocalContactsSet(name, config);
+		ValueSet fallbackContacts = (ValueSet)ZMIJSONSerializer.JSONToValue(config.getJSONObject("fallbackContacts"));
+		
+		ZMIModule module = new ZMIModule(zmi, name, fallbackContacts, pubKeyFilename);
+		findZone(zmi, name).getAttributes().add("contacts", localContacts);
+		if (config.has("queryExecutionInterval"))
+			module.queryExecutionInterval = ConfigUtils.parseInterval(config.getString("queryExecutionInterval"));
+		if (config.has("removeOutdatedZonesInterval"))
+			module.removeOutdatedZonesInterval = ConfigUtils.parseInterval(config.getString("removeOutdatedZonesInterval"));
+		if (config.has("zoneOutdatedDuration"))
+			module.zoneOutdatedDuration = ConfigUtils.parseInterval(config.getString("zoneOutdatedDuration"));
+		if (config.has("contactsPerNode"))
+			module.contactsPerNode = config.getInt("contactsPerNode");
+		if (config.has("queries")) {
+			JSONArray queries = config.getJSONArray("queries");
+			for (Object queryObject : queries) {
+				JSONObject queryJSONObject = (JSONObject)queryObject;
+				String queryName = queryJSONObject.getString("name");
+				String queryText = queryJSONObject.getString("query");
+				String signature = queryJSONObject.getString("signature");
+				Query query = new Query(queryText, signature);				
+				try {
+					module.installQuery(queryName, query);
+				} catch (Exception ex) {
+					throw new IllegalArgumentException("Error installing query from configuration file. Exception: " + ex.getMessage());
+				}
+			}
+		}
+		return module;
+	}
+	
+	private static ValueSet createLocalContactsSet(PathName name, JSONObject config) throws SocketException, UnknownHostException {
+		InetAddress ip = null;
+		if (config.has("localContactIp")) {
+			ip = Inet4Address.getByName(config.getString("localContactIp"));
+		} else {
+			// Detect prefered outbound IP: https://stackoverflow.com/questions/9481865/getting-the-ip-address-of-the-current-machine-using-java
+			DatagramSocket socket = new DatagramSocket();
+			socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
+			ip = socket.getLocalAddress();
+		}
+		int port = config.getInt("socketPort");
+		
+		ValueContact contactRaw = new ValueContact(name, ip, port);
+		ValueAndFreshness contact = ValueAndFreshness.freshValue(contactRaw);
+		List<Value> list = Arrays.asList(new Value[]{contact});
+		return new ValueSet(new HashSet<>(list), new TypeWrapper(TypePrimitive.CONTACT));
+	}
+	
 	@Override
 	public void setModulesHandler(ModulesHandler modulesHandler) {
 		this.modulesHandler = modulesHandler;
@@ -67,14 +142,15 @@ public class ZMIModule extends Thread implements Module {
 		messages.put((ZMIMessage) message);
 	}
 
-	public ZMIModule(ZMI zmi, Duration queryExecutionInterval, String pubKeyFilename) {
+	private ZMIModule(ZMI zmi, PathName name, ValueSet fallbackContacts, String pubKeyFilename) {
 		this.messages = new LinkedBlockingQueue<>();
-		this.zmi = zmi;
-		this.queryExecutionInterval = queryExecutionInterval;
 		this.random = new Random();
-		this.fallbackContacts = new ValueSet(new HashSet<>(), TypePrimitive.CONTACT);
+		this.queries = new HashMap<>();
+		this.zmi = zmi;
+		this.name = name;
+		this.fallbackContacts = ValueAndFreshness.freshValue(fallbackContacts);
 		try {
-			this.signVerifier = new Signer(Signer.Mode.SIGN_VERIFIER, pubKeyFilename);
+			this.signVerifier = new Signer(Signer.Mode.SIGN_VERIFIER, pubKeyFilename, null);
 		}
 		catch (Exception ex) {
 			throw new RuntimeException(ex);
@@ -83,17 +159,35 @@ public class ZMIModule extends Thread implements Module {
 
 	@Override
 	public void run() {
-		scheduleQueriesExecution();
+		try {
+			scheduleQueriesExecutionRecurringEvent();
+			scheduleRemoveOutdatedZonesRecurringEvent();
+		} catch (Exception ex) {
+			throw new RuntimeException("Failed to schedule recurring ZMI actions. Occured exception: " + ex);
+		}
 		while (true) {
 			try {
 				ZMIMessage message = messages.take();
 				if (message.type == ZMIMessage.Type.EXECUTE_QUERIES) {
+					updateOurContactTimestamp();
 					try {
 						executeQueries();
 					} catch(Exception ex) {
 						Logger.getLogger(ZMIModule.class.getName()).log(Level.FINEST, "Queries exectued.");
 					}
-					scheduleQueriesExecution();
+					continue;
+				}
+				if (message.type == ZMIMessage.Type.GET_LOCAL_AGENT_DATA) {
+					DisseminationMessage msg = DisseminationMessage.localAgentData(message.pid, zmi.clone(), fallbackContacts, new HashMap(queries));
+					modulesHandler.enqueue(msg);
+					continue;
+				}
+				if (message.type == ZMIMessage.Type.UPDATE_WITH_REMOTE_DATA) {
+					updateWithRemoteData(message.remoteData);
+					continue;
+				}
+				if (message.type == ZMIMessage.Type.REMOVE_OUTDATED_ZONES) {
+					removeOutdatedZones();
 					continue;
 				}
 					
@@ -111,19 +205,22 @@ public class ZMIModule extends Thread implements Module {
 							response.attributes = getZoneAttributes((ValueString) message.value1);
 							break;
 						case SET_ZONE_ATTRIBUTES:
-							setZoneAttributes((ValueString) message.value1, message.attributes);
+							setZoneAttributes((ValueString) message.value1, (ValueTime)message.value2, message.attributes);
 							break;
 						case INSTALL_QUERIES:
-							installQueries((ValueList) message.value1, (ValueList) message.value2, (ValueList) message.value3);
+							installQuery(((ValueString)message.value1).getValue(), message.query);
 							break;
 						case UNINSTALL_QUERIES:
-							uninstallQueries((ValueList) message.value1, (ValueList) message.value2);
+							uninstallQuery(((ValueString)message.value1).getValue(), message.query);
+							break;
+						case GET_ALL_QUERIES:
+							response.queries = new HashMap<>(queries); // shallow copy is just fine (we only read once created keys and values)
 							break;
 						case GET_FALLBACK_CONTACTS:
 							response.value1 = getFallbackContacts();
 							break;
 						case SET_FALLBACK_CONTACTS:
-							setFallbackContacts((ValueSet) message.value1);
+							setFallbackContacts(message.valueAndFreshness);
 							break;
 						default:
 							throw new UnsupportedOperationException("Message not supported: " + message.type);
@@ -135,6 +232,8 @@ public class ZMIModule extends Thread implements Module {
 				modulesHandler.enqueue(response);
 			} catch (InterruptedException ex) {
 				Logger.getLogger(ZMIModule.class.getName()).log(Level.FINE, null, ex);
+			} catch (Exception ex) {
+				Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
 			}
 		}
 	}
@@ -148,34 +247,25 @@ public class ZMIModule extends Thread implements Module {
 	}
 
 	private AttributesMap getZoneAttributes(ValueString zone) throws RemoteException {
-		return findZone(zmi, zone.getValue()).getAttributes();
+		return findZoneOrError(zmi, zone.getValue()).getAttributes();
 	}
 
-	private void installQueries(ValueList queryNames, ValueList queries, ValueList signatures) throws RemoteException {
-		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
-		checkElementType((TypeCollection) queries.getType(), PrimaryType.STRING);
-		checkElementType((TypeCollection) signatures.getType(), PrimaryType.STRING);
-		if (queryNames.size() != queries.size() || queries.size() != signatures.size()) {
-			throw new RemoteException("QueryNames, queries and signatures must have equal size " + queryNames.size() + " vs " + queries.size() + " vs " + signatures.size());
-		}
-		if (queryNames.size() != 1) {
-			throw new RemoteException("You can install only one query at once.");
-		}
-		String name = ((ValueString) queryNames.get(0)).getValue();
-		ValueString query = (ValueString) queries.get(0);
-		String errorMsg = validateQuery(name, query.getValue());
+	private void installQuery(String name, Query query) throws RemoteException {
+		String errorMsg = validateQuery(name, query.getText());
 		if (errorMsg != null) {
-			throw new RemoteException(errorMsg);
+			throw new RmiCallException(errorMsg);
 		}
 
-		String signature = ((ValueString) signatures.get(0)).getValue();
-		QueryOperation queryOp = QueryOperation.newQueryInstall(name, query.getValue());
-		if (!signVerifier.verifyQueryOperationSignature(queryOp, signature)) {
-			throw new RemoteException("SecurityError: Invalid signatures for queries.");
+		QueryOperation queryOp = QueryOperation.newQueryInstall(name, query.getText());
+		if (!signVerifier.verifyQueryOperationSignature(queryOp, query.getSignature())) {
+			throw new RmiCallException("SecurityError: Invalid signatures for queries.");
 		}
-
 		Attribute attribute = new Attribute(name);
-		installQuery(zmi, attribute, query);
+		if (queries.getOrDefault(attribute, null) != null) {
+			throw new RmiCallException("Query was already installed");
+		}
+
+		queries.put(attribute, query);
 	}
 	
 	// returns error message, null==ok
@@ -183,6 +273,9 @@ public class ZMIModule extends Thread implements Module {
 		Attribute attribute = new Attribute(name);
 		if (!Attribute.isQuery(attribute)) {
 			return "Invalid query name " + attribute + " should be proceed with &";
+		}
+		if (text.isEmpty()) {
+			return "Query can't be empty.";
 		}
 		try {
 			tryParse(text);
@@ -193,79 +286,55 @@ public class ZMIModule extends Thread implements Module {
 		return null;
 	}
 
-	private void uninstallQueries(ValueList queryNames, ValueList signatures) throws RemoteException {
-		checkElementType((TypeCollection) queryNames.getType(), PrimaryType.STRING);
-		checkElementType((TypeCollection) signatures.getType(), PrimaryType.STRING);
-		if (queryNames.size() != signatures.size()) {
-			throw new RemoteException("QueryNames and signatures must have equal size " + queryNames.size() + " vs " + signatures.size());
-		}
-		if (queryNames.size() != 1) {
-			throw new RemoteException("You can uninstall only one query at once.");
-		}
-		Value queryName = queryNames.get(0);
-		Attribute attribute = new Attribute(((ValueString) queryName).getValue());
-		if (!Attribute.isQuery(attribute)) {
-			throw new RemoteException("Invalid query name " + attribute + " should be proceed with &");
+	private void uninstallQuery(String name, Query query) throws RemoteException {
+		Attribute attribute = new Attribute(name);
+
+		QueryOperation queryOp = QueryOperation.newQueryUninstall(name);
+		if (!signVerifier.verifyQueryOperationSignature(queryOp, query.getSignature())) {
+			throw new RmiCallException("SecurityError: Invalid signatures for queries.");
 		}
 
-		String signature = ((ValueString) signatures.get(0)).getValue();
-		String queryNameStr = ((ValueString) queryName).getValue();
-		QueryOperation queryOp = QueryOperation.newQueryUninstall(queryNameStr);
-		if (!signVerifier.verifyQueryOperationSignature(queryOp, signature)) {
-			throw new RemoteException("SecurityError: Invalid signatures for queries.");
+		if (!queryInstalled(attribute)) {
+			throw new RmiCallException("Query not installed.");
 		}
-
-		if (!uninstallQuery(zmi, attribute)) {
-			throw new RemoteException("Query not found.");
-		}
+		queries.put(attribute, query);
 	}
 
-	private void setZoneAttributes(ValueString zone, AttributesMap attributes) throws RemoteException {
-		ZMI zoneZmi = findZone(zmi, new PathName(zone.getValue()));
+	private void setZoneAttributes(ValueString zone, ValueTime freshness, AttributesMap attributes) throws RemoteException {
+		ZMI zoneZmi = findZoneOrError(zmi, zone.getValue());
 		if (!zoneZmi.getSons().isEmpty()) {
 			throw new IllegalArgumentException("setZoneAttributes is only allowed for singleton zone.");
 		}
 		zoneZmi.getAttributes().addOrChange(attributes);
+		zoneZmi.setFreshness(freshness);
 	}
 
-	private void setFallbackContacts(ValueSet contacts) throws RemoteException {
-		if (contacts.isNull()) {
-			throw new IllegalArgumentException("Fallback contacts set can't be null");
-		}
-		checkElementType((TypeCollection) contacts.getType(), PrimaryType.CONTACT);
+	private void setFallbackContacts(ValueAndFreshness contacts) throws RemoteException {
 		fallbackContacts = contacts;
 	}
 
 	private ValueSet getFallbackContacts() throws RemoteException {
-		return fallbackContacts;
+		return (ValueSet)fallbackContacts.getValue();
 	}
 
 	private void executeQueries() throws Exception {
 		executeQueries(zmi);
 	}
 
-	private void checkElementType(TypeCollection collectionType, PrimaryType expectedType) {
-		PrimaryType actualType = collectionType.getElementType().getPrimaryType();
-		if (actualType != expectedType) {
-			throw new IllegalArgumentException("Illegal type, got: " + actualType + " expected " + expectedType);
-		}
-	}
-
-	private static void executeQueries(ZMI zmi) throws Exception {
+	private void executeQueries(ZMI zmi) throws Exception {
 		if (!zmi.getSons().isEmpty()) {
-			for (ZMI son : zmi.getSons()) {
-				executeQueries(son);
-			}
+			for (ZMI son : zmi.getSons())
+				if (name.startsWith(son.getPathName()))
+					executeQueries(son);
+			zmi.updateFreshness();
 			Interpreter interpreter = new Interpreter(zmi);
-			ArrayList<ValueString> queries = new ArrayList<>();
-			for (Entry<Attribute, Value> entry : zmi.getAttributes()) {
-				if (Attribute.isQuery(entry.getKey())) {
-					queries.add((ValueString) entry.getValue());
+			for (Query query : queries.values()) {
+				String queryText = query.getText();
+				if (queryText.isEmpty()) {
+					continue;
 				}
-			}
-			for (ValueString query : queries) {
 				try {
-					Program program = tryParse(query.getValue());
+					Program program = tryParse(queryText);
 					Set<String> attributes = AttributesExtractor.extractAttributes(program);
 					for (String attribute : attributes) {
 						zmi.getAttributes().addOrChange(attribute, ValueNull.getInstance());
@@ -280,38 +349,30 @@ public class ZMIModule extends Thread implements Module {
 			}
 		}
 	}
+	
+	public static Set<String> extractAttributesCreatedByQuery(String query) throws Exception {
+		Program program = tryParse(query);
+		return AttributesExtractor.extractAttributes(program);
+	}
 
 	private static Program tryParse(String query) throws Exception {
 		Yylex lex = new Yylex(new ByteArrayInputStream(query.getBytes()));
 		return (new parser(lex)).pProgram();
 	}
 
-	private static void installQuery(ZMI zmi, Attribute attribute, ValueString query) {
-		if (!zmi.getSons().isEmpty()) {
-			for (ZMI son : zmi.getSons()) {
-				installQuery(son, attribute, query);
-			}
-			zmi.getAttributes().addOrChange(attribute, query);
+	private static ZMI findZoneOrError(ZMI zmi, String name) throws RemoteException {
+		zmi = findZone(zmi, name);
+		if (zmi == null) {
+			throw new RmiCallException("Zone not found.");
 		}
+		return zmi;
 	}
-
-	private static boolean uninstallQuery(ZMI zmi, Attribute attribute) throws RemoteException {
-		boolean uninstalled = false;
-		if (!zmi.getSons().isEmpty()) {
-			for (ZMI son : zmi.getSons()) {
-				uninstalled |= uninstallQuery(son, attribute);
-			}
-			uninstalled |= zmi.getAttributes().getOrNull(attribute) != null;
-			zmi.getAttributes().remove(attribute);
-		}
-		return uninstalled;
-	}
-
-	private ZMI findZone(ZMI zmi, String name) throws RemoteException {
+	
+	public static ZMI findZone(ZMI zmi, String name) {
 		return findZone(zmi, new PathName(name));
 	}
 
-	private ZMI findZone(ZMI zmi, PathName pathName) throws RemoteException {
+	public static ZMI findZone(ZMI zmi, PathName pathName) {
 		if (pathName.getComponents().isEmpty()) {
 			return zmi;
 		}
@@ -322,17 +383,195 @@ public class ZMIModule extends Thread implements Module {
 				return findZone(son, pathName.consumePrefix());
 			}
 		}
-		throw new RemoteException("Zone not found.");
+		return null;
 	}
 	
-	private void scheduleQueriesExecution() {
-		long id = random.nextLong();
-		ZMIMessage callbackMessage = new ZMIMessage(ZMIMessage.Type.EXECUTE_QUERIES);
-		TimerMessage message = TimerMessage.scheduleOneTimeCallback(id, queryExecutionInterval, callbackMessage);
-		try {
-			modulesHandler.enqueue(message);
-		} catch (InterruptedException ex) {
-			Logger.getLogger(ZMIModule.class.getName()).log(Level.SEVERE, null, ex);
+	public static void removeInfoUnrelevantForTheOther(ZMI zmi, PathName name, PathName otherName) {
+		while (otherName.startsWith(zmi.getPathName())) {
+			// Remove attributes if we are on the path from other node to the root.
+			if (otherName.startsWith(zmi.getPathName()))
+				zmi.removeAllAttributesExceptContacts();
+			ZMI nextZmi = null;
+			for (ZMI node : zmi.getSons()) {
+				// Do not send attributs about the other zone.
+				if (otherName.startsWith(node.getPathName()))
+					node.removeAllAttributesExceptContacts();
+				if (name.startsWith(node.getPathName()))
+					nextZmi = node;
+			}
+			if (nextZmi == null)
+				break;
+			zmi = nextZmi;
 		}
+		// We passed LCA of our node and the other node. Remove unrelevant nodes.
+		zmi.removeSons();
+	}
+		
+	private void scheduleQueriesExecutionRecurringEvent() throws InterruptedException {
+		long id = random.nextLong();
+		ZMIMessage callbackMessage = ZMIMessage.executeQueries();
+		TimerMessage message = TimerMessage.scheduleRecurringCallback(id, queryExecutionInterval, callbackMessage);
+		modulesHandler.enqueue(message);
+	}
+
+	private boolean queryInstalled(Attribute attribute) {
+		Query query = queries.getOrDefault(attribute, null);
+		if (query == null) {
+			return false;
+		}
+		String queryText = query.getText();
+		return !queryText.isEmpty();
+	}
+
+	private void updateWithRemoteData(AgentData remoteData) {
+		fallbackContacts = fallbackContacts.getFresher(remoteData.getFallbackContacts());
+		for (Entry<Attribute, Query> entry : remoteData.getQueries().entrySet()) {
+			String remoteQueryName = entry.getKey().getName();
+			Query remoteQuery = entry.getValue();
+			if (entry.getValue().isNull())
+				continue;
+			
+			QueryOperation operation = null;
+			if (remoteQuery.getText().isEmpty()) {
+				operation = QueryOperation.newQueryUninstall(remoteQueryName);
+			} else {
+				operation = QueryOperation.newQueryInstall(remoteQueryName, remoteQuery.getText());
+			}
+			try {
+				if (!signVerifier.verifyQueryOperationSignature(operation, remoteQuery.getSignature())) {
+					continue; // Skip incorrect localQuery.
+				}
+			} catch (RemoteException ex) {
+				Logger.getLogger(ZMIModule.class.getName()).log(Level.FINE, "Exception occured while verifing query. ", ex);
+				continue;
+			}
+
+			// If local query has been uninstalled we do not let to install it again.
+			Query localQuery = queries.getOrDefault(entry.getKey(), null);
+			if (localQuery != null && localQuery.getText().isEmpty() && !remoteQuery.getText().isEmpty())
+				continue;
+			
+			queries.merge(entry.getKey(), remoteQuery, (q1, q2) -> q1.getFresher(q2));
+		}
+		updateWithRemoteData(zmi, remoteData.getZmi());
+	}
+	
+	private void updateWithRemoteData(ZMI zmi, ZMI remoteZmi) {
+		ValueSet contacts = null;
+		for (ZMI remoteSon : remoteZmi.getSons()) {
+			ZMI localSon = zmi.getSonBySingletonName(remoteSon.getPathName().getSingletonName());
+			if (localSon == null) {
+				zmi.addSon(remoteSon);
+			} else {
+				if (name.startsWith(remoteSon.getPathName()))
+					contacts = (ValueSet)remoteSon.getAttributes().getOrNull("contacts");
+				localSon.updateEachOtherContacts(remoteSon, contactsPerNode);
+				if (!name.startsWith(remoteSon.getPathName())) // Update only siblings.
+					localSon.updateAttributesIfFresher(remoteSon);
+			}
+		}
+
+		// Process next level
+		ZMI nextZmi = null;
+		for (ZMI localSon : zmi.getSons())
+			if (name.startsWith(localSon.getPathName()))
+				nextZmi = localSon;
+		if (nextZmi == null)
+			return;
+		
+		ZMI nextRemoteZmi = remoteZmi.getSonBySingletonName(nextZmi.getPathName().getSingletonName());
+		if (nextRemoteZmi != null)
+			updateWithRemoteData(nextZmi, nextRemoteZmi);
+		
+		addZMINodesFromContacts(contacts);
+	}
+
+	private void addZMINode(ZMI remoteZmi) {
+		PathName fatherPath = remoteZmi.getPathName().levelUp();
+		ZMI father = findZone(zmi, fatherPath);
+		if (father == null) {
+			throw new IllegalArgumentException(
+					"You can only add sons of existing nodes");
+		}
+		father.addSon(remoteZmi);
+	}
+	
+	private void scheduleRemoveOutdatedZonesRecurringEvent() throws InterruptedException {
+		ZMIMessage innerMsg = ZMIMessage.removeOutdatedZones();
+		TimerMessage msg = TimerMessage.scheduleOneTimeCallback(random.nextLong(), removeOutdatedZonesInterval, innerMsg);
+		modulesHandler.enqueue(msg);
+	}
+	
+	private void removeOutdatedZones() {
+		ValueTime minTime = (ValueTime)ValueTime.now().subtract(new ValueDuration(0, zoneOutdatedDuration.toMillis()));
+		removeOutdatedZones(zmi, minTime);
+	}
+
+	private void removeOutdatedZones(ZMI zmi, ValueTime minTime) {
+		List<ZMI> toRemove = new ArrayList<>();
+		ZMI nextZmi = null;
+		for (ZMI son : zmi.getSons()) {
+			if (name.startsWith(son.getPathName())) {
+				nextZmi = son;
+			} else if (son.getFreshness().isLowerThan(minTime).getValue()) {
+				toRemove.add(son);
+			}
+		}
+		for (ZMI son : toRemove) {
+			Logger.getLogger(ZMIModule.class.getName()).log(Level.INFO, "Removing outdated zone {0}", new Object[]{son.getPathName()});
+			zmi.removeSon(son);
+		}
+		if (nextZmi != null) {
+			removeOutdatedZones(nextZmi, minTime);
+		}
+	}
+
+	private void addZMINodesFromContacts(ValueSet contacts) {
+		if (contacts == null)
+			return;
+		for (Value contact : contacts) {
+			if (contact instanceof ValueAndFreshness) {
+				ValueAndFreshness contactWithTs = (ValueAndFreshness)contact;
+				addZMINodeFromContact(zmi, contactWithTs);
+			}
+		}
+	}
+	
+	private void addZMINodeFromContact(ZMI zmi, ValueAndFreshness contactWithTs) {
+		ValueContact contact = (ValueContact)contactWithTs.getValue();
+		ValueTime freshness = contactWithTs.getFreshness();
+		List<String> components = contact.getName().getComponents();
+		for (int i = components.size() - 1; i >= 1; i--) {
+			PathName fatherName = new PathName(components.subList(0, i));
+			ZMI father = findZone(zmi, fatherName);
+			if (father == null)
+				continue;
+			
+			PathName nodeName = new PathName(components.subList(0, i+1));
+			ZMI node = findZone(zmi, nodeName);
+			if (node == null) {
+				node = new ZMI(father, nodeName.getSingletonName());
+				node.setFreshness(freshness);
+				father.addSon(node);
+
+				
+				List<Value> list = Arrays.asList(new Value[]{contactWithTs});
+				ValueSet contacts = new ValueSet (new HashSet<>(list), new TypeWrapper(TypePrimitive.CONTACT));
+				node.getAttributes().add("contacts", contacts);
+				break;
+			}
+		}
+	}
+	
+	private void updateOurContactTimestamp() {
+		ZMI zone = findZone(zmi, name);
+		ValueSet contacts = (ValueSet)zone.getAttributes().get("contacts");
+		ValueTime freshness = ValueTime.now();
+		ValueSet updated = new ValueSet(new TypeWrapper(TypePrimitive.CONTACT));
+		for (Value contact : contacts) {
+			ValueAndFreshness contactWithTs = (ValueAndFreshness)contact;
+			updated.add(new ValueAndFreshness(contactWithTs.getValue(), freshness));
+		}
+		zone.getAttributes().addOrChange("contacts", updated);
 	}
 }

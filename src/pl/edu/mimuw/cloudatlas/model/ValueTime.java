@@ -28,9 +28,9 @@ import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
 
-import pl.edu.mimuw.cloudatlas.model.Value;
-import pl.edu.mimuw.cloudatlas.model.ValueTime;
 
 /**
  * A class representing the POSIX time in milliseconds. This is a simple wrapper of a Java <code>Long</code> object.
@@ -41,6 +41,10 @@ public class ValueTime extends ValueSimple<Long> implements Serializable {
 	 * <code>String</code> object.
 	 */
 	public static final DateFormat TIME_FORMAT = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
+	
+	public static ValueTime now() {
+		return new ValueTime(Instant.now().toEpochMilli());
+	}
 	
 	/**
 	 * Constructs a new <code>ValueTime</code> object wrapping the specified value.
@@ -102,6 +106,10 @@ public class ValueTime extends ValueSimple<Long> implements Serializable {
 		}
 		throw new IncompatibleTypesException(getType(), value.getType(), Operation.SUBTRACT);
 		
+	}
+	
+	public ValueTime adjustTime(Duration diff) {
+		return new ValueTime(getValue() + diff.toMillis());
 	}
 	
 	@Override

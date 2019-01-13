@@ -21,15 +21,37 @@ import java.util.LinkedList;
  * @author pawel
  */
 class EventScheduler {
+	static private class Event {
+		Duration durationBetweenEvents;
+		boolean recurring;
+		ModuleMessage msg;
 
+		public static Event newRecurringEvent(Duration durationBetweenEvents, ModuleMessage msg) {
+			Event event = new Event();
+			event.durationBetweenEvents = durationBetweenEvents;
+			event.recurring = true;
+			event.msg = msg;
+			return event;
+		}
+		
+		public static Event newOneTimeEvent(ModuleMessage msg) {
+			Event event = new Event();
+			event.recurring = false;
+			event.msg = msg;
+			return event;
+		}
+		
+		private Event() {}
+	}
+	
 	private final TreeMultimap<LocalDateTime, Long> timeToId;
 	private final HashMap<Long, LocalDateTime> idToTime;
-	private final HashMap<Long, ModuleMessage> idToCallbackMessage;
+	private final HashMap<Long, Event> idToEvent;
 
 	EventScheduler() {
 		this.timeToId = TreeMultimap.create();
 		this.idToTime = new HashMap<>();
-		this.idToCallbackMessage = new HashMap<>();
+		this.idToEvent = new HashMap<>();
 	}
 
 	public synchronized Collection<ModuleMessage> waitForNextBatch() {
@@ -44,9 +66,14 @@ class EventScheduler {
 					if (eventsTime.isEqual(current) || eventsTime.isBefore(current)) {
 						LinkedList<ModuleMessage> messages = new LinkedList<>();
 						for (Long id : entry.getValue()) {
-							messages.add(idToCallbackMessage.get(id));
-							idToCallbackMessage.remove(id);
+							Event event = idToEvent.get(id);
+							messages.add(event.msg);
+							idToEvent.remove(id);
 							idToTime.remove(id);
+							if (event.recurring) {
+								LocalDateTime eventTime = LocalDateTime.now().plus(event.durationBetweenEvents);
+								scheduleEventImpl(eventTime, id, event);
+							}
 						}
 						timeToId.removeAll(entry.getKey());
 						return messages;
@@ -59,12 +86,23 @@ class EventScheduler {
 		}
 	}
 
-	public synchronized void scheduleEvent(LocalDateTime time, long id, ModuleMessage message) {
+	public synchronized void scheduleOneTimeEvent(LocalDateTime time, long id, ModuleMessage message) {
+		Event event = Event.newOneTimeEvent(message);
+		scheduleEventImpl(time, id, event);
+		notifyAll();
+	}
+	
+	public synchronized void scheduleRecurringEvent(LocalDateTime time, long id, Duration durationBetweenEvents, ModuleMessage message) {
+		Event event = Event.newRecurringEvent(durationBetweenEvents, message);
+		scheduleEventImpl(time, id, event);
+		notifyAll();
+	}
+
+	private void scheduleEventImpl(LocalDateTime time, long id, Event event) {
 		cancelEventImpl(id);
 		timeToId.put(time, id);
 		idToTime.put(id, time);
-		idToCallbackMessage.put(id, message);
-		notifyAll();
+		idToEvent.put(id, event);
 	}
 
 	public synchronized void cancelEvent(long id) {
@@ -75,7 +113,7 @@ class EventScheduler {
 		LocalDateTime time = idToTime.getOrDefault(id, null);
 		if (time != null) {
 			idToTime.remove(id);
-			idToCallbackMessage.remove(id);
+			idToEvent.remove(id);
 			timeToId.remove(time, id);
 		}
 	}
@@ -142,12 +180,30 @@ public class TimerModule extends Thread implements Module {
 		sleeperThread.start();
 		while (true) {
 			try {
+				// Assumption: theoretically, we could have an id collision, but it's not easy to handle:
+				// we could introduce update messages to overwrite existing events, but it would make
+				// scheduling regular messages able to fail, so there should be extra callback for the fail
+				// case and all other modules would need to introduce complex logic to handle it
+				// so, we just assume, that long type (8 bytes) is just enough big, so that the probability
+				// of a collision is negligible
 				TimerMessage message = messages.take();
-				if (message.type == TimerMessage.Type.SCHEDULE_ONE_TIME_CALLBACK) {
-					LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
-					events.scheduleEvent(eventTime, message.id, message.callbackMessage);
-				} else {
-					events.cancelEvent(message.id);
+				switch (message.type) {
+					case SCHEDULE_ONE_TIME_CALLBACK: {
+						LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
+						events.scheduleOneTimeEvent(eventTime, message.id, message.callbackMessage);
+						break;
+					}
+					case SCHEDULE_RECURRING_CALLBACK: {
+						LocalDateTime eventTime = LocalDateTime.now().plus(message.duration);
+						events.scheduleRecurringEvent(eventTime, message.id, message.duration, message.callbackMessage);
+						break;
+					}
+					case CANCEL_CALLBACK: {
+						events.cancelEvent(message.id);
+						break;
+					}
+					default:
+						throw new IllegalArgumentException("Unsupported message type " + message.type);
 				}
 			} catch (Exception ex) {
 				Logger.getLogger(TimerModule.class.getName()).log(Level.SEVERE, null, ex);

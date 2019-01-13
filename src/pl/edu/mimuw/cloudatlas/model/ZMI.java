@@ -26,6 +26,7 @@ package pl.edu.mimuw.cloudatlas.model;
 
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -37,11 +38,51 @@ import java.util.Map.Entry;
  * references to its father and sons in the tree.
  */
 public class ZMI implements Cloneable, Serializable {
-	private final AttributesMap attributes = new AttributesMap();
+	private AttributesMap attributes = new AttributesMap();
 	
-	private final List<ZMI> sons = new ArrayList<ZMI>();
+	private List<ZMI> sons = new ArrayList<>();
 	private PathName pathName;
 	private ZMI father;
+	private ValueTime freshness;
+
+	public ValueTime getFreshness() {
+		return freshness;
+	}
+
+	public void setFreshness(ValueTime freshness) {
+		this.freshness = freshness;
+	}
+	
+	public void updateFreshness() {
+		this.freshness = ValueTime.now();
+	}
+	
+	public void adjustRemoteTimeToLocalTime(Duration diff) {
+		freshness = freshness.adjustTime(diff);
+		for (ZMI son : sons) 
+			son.adjustRemoteTimeToLocalTime(diff);
+	}
+	
+	public void updateAttributesIfFresher(ZMI zmi) {
+		if (freshness.isLowerThan(zmi.freshness).getValue()) {
+			attributes = zmi.attributes;
+			freshness = zmi.freshness;
+		}
+	}
+	
+	public void updateEachOtherContacts(ZMI zmi, int contactsPerNode) {
+		ValueSet mergedContacts = new ValueSet(new TypeWrapper(TypePrimitive.CONTACT));
+		ValueSet remoteContacts = (ValueSet) zmi.attributes.getOrNull("contacts");
+		if (remoteContacts != null)
+			mergedContacts.addAll(remoteContacts);
+		ValueSet localContacts = (ValueSet) attributes.getOrNull("contacts");
+		if (localContacts != null)
+			mergedContacts.addAll(localContacts);
+		
+		mergedContacts = mergedContacts.randomSubset(contactsPerNode);
+		attributes.addOrChange("contacts", mergedContacts);
+		zmi.attributes.addOrChange("contacts", mergedContacts);
+	}
 	
 	/**
 	 * Creates a new ZMI with no father (the root zone) and empty sons list.
@@ -50,6 +91,10 @@ public class ZMI implements Cloneable, Serializable {
 		this(null, null);
 	}
 
+	public ZMI(ZMI father, String name) {
+		this(father, name, ValueTime.now());
+	}
+	
 	/**
 	 * Creates a new ZMI with the specified node as a father and empty sons list. This method does not perform any
 	 * operation on the <code>father</code>. Especially, setting this object as a <code>father</code>'s son must be done
@@ -58,7 +103,7 @@ public class ZMI implements Cloneable, Serializable {
 	 * @param father a father of this ZMI
 	 * @see #addSon(ZMI)
 	 */
-	public ZMI(ZMI father, String name) {
+	public ZMI(ZMI father, String name, ValueTime freshness) {
 		setFather(father);
 		attributes.add("name", new ValueString(name));
 		if (father == null) {
@@ -66,17 +111,9 @@ public class ZMI implements Cloneable, Serializable {
 		} else {
 			pathName = father.getPathName().levelDown(name);
 		}
-		//initRequiredAttributes(name);
+		this.freshness = freshness;
 	}
 	
-	private void initRequiredAttributes(String name) {
-		attributes.add("level", new ValueInt(null));
-		attributes.add("name", new ValueString(name));
-		attributes.add("owner", new ValueString(null));
-		attributes.add("timestamp", new ValueTime(new Date().getTime()));
-		attributes.add("contacts", new ValueSet(TypePrimitive.CONTACT));
-		attributes.add("cardinality", new ValueInt(null));
-	}
 
 	/**
 	 * Gets a father of this ZMI in a tree.
@@ -111,6 +148,13 @@ public class ZMI implements Cloneable, Serializable {
 		return Collections.unmodifiableList(sons);
 	}
 	
+	public ZMI getSonBySingletonName(String singletonName) {
+		for (ZMI son : sons)
+			if (son.getPathName().getSingletonName().equals(singletonName))
+				return son;
+		return null;
+	}
+	
 	/**
 	 * Adds the specified ZMI to the list of sons of this ZMI. This method does not perform any operation on a
 	 * <code>son</code>. Especially, setting this object as a <code>son</code>'s father must be done separately.
@@ -143,6 +187,18 @@ public class ZMI implements Cloneable, Serializable {
 		return attributes;
 	}
 	
+	// Might be usefull to remove unused data before sending ZMI in information dissemination.
+	public void removeAllAttributesExceptContacts() {
+		Value contacts = attributes.getOrNull("contacts");
+		attributes.clear();
+		if (contacts != null)
+			attributes.add("contacts", contacts);
+	}
+	
+	public void removeSons() {
+		sons.clear();
+	}
+	
 	/**
 	 * Prints recursively in a prefix order (starting from this ZMI) a whole tree with all the attributes.
 	 * 
@@ -167,7 +223,7 @@ public class ZMI implements Cloneable, Serializable {
 	@Override
 	public ZMI clone() {
 		String myName = ((ValueString)attributes.get("name")).getValue();
-		ZMI result = new ZMI(father, myName);
+		ZMI result = new ZMI(father, myName, freshness);
 		result.attributes.addOrChange(attributes.clone());
 		for(ZMI son : sons) {
 			ZMI sonClone = son.clone();
@@ -196,41 +252,15 @@ public class ZMI implements Cloneable, Serializable {
 	public String toString() {
 		return attributes.toString();
 	}
-
-	public void updateAttributes() { // probably should be somewhere else...
-		if (father != null) {
-			ValueInt lvl = (ValueInt)father.getAttributes().get("level");
-			ValueInt myLvl = lvl.addValue(new ValueInt(1L));
-			attributes.addOrChange("level", myLvl);
-
-			ValueString fOwner = (ValueString)father.getAttributes().get("owner");
-			ValueString fName = (ValueString)father.getAttributes().get("name");
-			ValueString myOwner = fOwner.addValue(fName);
-			attributes.addOrChange("owner", myOwner);
+	
+	public static ValueContact unwrapContact(Value value) {
+		switch (value.getType().getPrimaryType()) {
+			case CONTACT:
+				return (ValueContact)value;
+			case WRAPPER:
+				return (ValueContact)((ValueAndFreshness)value).getValue();
+			default:
+				return null;
 		}
-		else {
-			attributes.addOrChange("level", new ValueInt(0L));
-			attributes.addOrChange("owner", new ValueString(null));
-		}
-
-		ValueInt card = new ValueInt(0L);
-		ValueSet contacts = new ValueSet(TypePrimitive.CONTACT);
-		for (ZMI son : sons) {
-			son.updateAttributes();
-
-			ValueInt sonCard = (ValueInt) son.getAttributes().get("cardinality");
-			ValueSet sonContacts = (ValueSet) son.getAttributes().get("contacts");
-			card = card.addValue(sonCard);
-			if (!sonContacts.isEmpty()) {
-				contacts.add(sonContacts.getValue().iterator().next());
-			}
-		}
-		if (sons.isEmpty()) {
-			card = new ValueInt(1L);
-			contacts = (ValueSet) attributes.get("contacts");
-		}
-
-		attributes.addOrChange("cardinality", card);
-		attributes.addOrChange("contacts", contacts);
 	}
 }

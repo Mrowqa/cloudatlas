@@ -24,7 +24,7 @@ public class ModulesHandler {
 			m.start();
 		}
 	}
-	
+		
 	public void enqueue(ModuleMessage message) throws InterruptedException {
 		assert message != null;
 

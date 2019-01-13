@@ -89,6 +89,11 @@ $(document).ready(function() {
 				}
 				// rest of types is not supported
 			});
+
+            if (canvasHTML === "") {
+                canvasHTML = navbarHTML = "No attributes";
+            }
+
 			$("#graphs-content").html(canvasHTML);
 			$("#navbar-charts").html(navbarHTML);
 			feather.replace();
@@ -136,6 +141,13 @@ $(document).ready(function() {
 			$("#graphs-content").html("Failed to download zmi history: " + textStatus);
 		});
 	}
+
+    $.get("/zones/local-name", function (data) {
+        $("#navbar-title").text("@ " + data);
+    })
+    .fail(function( jqXHR, textStatus, errorThrown ) {
+        alert("Can not get local zone name! Error: " + textStatus);
+    });
 
 	setInterval(updateHistoryGraphs, updateIntervalInMs);
 });

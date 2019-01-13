@@ -35,8 +35,14 @@ import java.net.InetAddress;
  * This class is immutable.
  */
 public class ValueContact extends Value implements Serializable {
+	public final static int DEFAULT_PORT = 42777;
 	private final PathName name;
 	private final InetAddress address;
+	private final int port;
+
+	public int getPort() {
+		return port;
+	}
 	
 	/**
 	 * Constructs a new <code>ValueContact</code> with the specified path name and IP address.
@@ -44,9 +50,14 @@ public class ValueContact extends Value implements Serializable {
 	 * @param name the full path name of a node
 	 * @param address the IP address of the node
 	 */
-	public ValueContact(PathName name, InetAddress address) {
+	public ValueContact(PathName name, InetAddress address, int port) {
 		this.name = name;
 		this.address = address;
+		this.port = port;
+	}
+	
+	public ValueContact(PathName name, InetAddress address) {
+		this(name, address, DEFAULT_PORT);
 	}
 	
 	@Override
@@ -86,7 +97,7 @@ public class ValueContact extends Value implements Serializable {
 				if(isNull())
 					return ValueString.NULL_STRING;
 				else
-					return new ValueString("(" + name.toString() + ", " + address.toString() + ")");
+					return new ValueString("(" + name.toString() + ", " + address.toString() + ":" + port +")");
 			default:
 				throw new UnsupportedConversionException(getType(), type);
 		}

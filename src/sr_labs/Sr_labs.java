@@ -8,25 +8,28 @@ package sr_labs;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.Inet4Address;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
+import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Scanner;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
+import pl.edu.mimuw.cloudatlas.agent.ZMIModule;
+import pl.edu.mimuw.cloudatlas.agent.dissemination.NodeSelector;
 import pl.edu.mimuw.cloudatlas.fetcher.Fetcher;
-import static pl.edu.mimuw.cloudatlas.interpreter.Main.executeQueries;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 import pl.edu.mimuw.cloudatlas.model.PathName;
@@ -41,9 +44,9 @@ import pl.edu.mimuw.cloudatlas.model.ValueDouble;
 import pl.edu.mimuw.cloudatlas.model.ValueInt;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
-import pl.edu.mimuw.cloudatlas.model.ValueTime;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 import pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder;
+import static pl.edu.mimuw.cloudatlas.model.ZMIHierarchyBuilder.createContact;
 import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
 import pl.edu.mimuw.cloudatlas.model.ZMISerializer;
 import pl.edu.mimuw.cloudatlas.signer.QueryOperation;
@@ -58,10 +61,32 @@ public class Sr_labs {
 	/**
 	 * @param args the command line arguments
 	 */
-	public static void main(String[] args) throws ParseException, UnknownHostException, IOException {
+	public static void main(String[] args) throws ParseException, UnknownHostException, IOException, ClassNotFoundException {
+		System.out.println("First method");
+		try(final DatagramSocket socket = new DatagramSocket()){
+			socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
+			String ip = socket.getLocalAddress().getHostAddress();
+			System.out.println(ip);
+		}
+		
+		System.out.println("Second method");
+		Enumeration e = NetworkInterface.getNetworkInterfaces();
+		while(e.hasMoreElements())
+		{
+			NetworkInterface n = (NetworkInterface) e.nextElement();
+			Enumeration ee = n.getInetAddresses();
+			while (ee.hasMoreElements())
+			{
+				InetAddress i = (InetAddress) ee.nextElement();
+				System.out.println(i.getHostAddress());
+			}
+		}
+
+		//testZMIModuleUtilFunctions();
+		//testNodeSelection();
 		//testSerialize();
 		//testSerializeJSON();
-		testCloudAtlasAgent();
+		//testCloudAtlasAgent();
 		//testFetcherDataCollection();
 	}
 
@@ -89,8 +114,6 @@ public class Sr_labs {
 		list.add(new ValueBoolean(null));
 		attrs.add("vList", list);
 
-		root.updateAttributes();
-
 		System.out.println(root.toString());
 		System.out.println(roomB.toString());
 
@@ -117,6 +140,13 @@ public class Sr_labs {
 		System.out.println("OK");
 	}
 
+	private static void testZMIModuleUtilFunctions() throws ParseException, UnknownHostException {
+		ZMI zmi = ZMIHierarchyBuilder.createTestHierarchy();
+		PathName name = new PathName("/uw/violet07");
+		PathName otherName = new PathName("/uw/khaki13");
+		ZMIModule.removeInfoUnrelevantForTheOther(zmi, name, otherName);
+	}
+	
 	private static void collectAttributesMaps(ZMI zmi, List<AttributesMap> attrs) {
 		attrs.add(zmi.getAttributes());
 		for (ZMI son : zmi.getSons()) {
@@ -245,5 +275,29 @@ public class Sr_labs {
 	private static void testFetcherDataCollection() {
 		AttributesMap attrs = Fetcher.collectData();
 		System.out.println(attrs);
+	}
+	
+	private static void testNodeSelection() throws ParseException, UnknownHostException {
+		int numRepeats = 100;
+		PathName name = new PathName("/uw/violet07");
+		ValueContact violet07Contact = createContact("/uw/violet07", (byte)1, (byte)1, (byte)1, (byte)10);
+		ValueContact whatever01Contact = ZMIHierarchyBuilder.createContact("/pjwstk/whatever01", (byte)4, (byte)1, (byte)1, (byte)1);
+		ValueContact whatever02Contact = ZMIHierarchyBuilder.createContact("/pjwstk/whatever02", (byte)5, (byte)1, (byte)1, (byte)1);
+		List<Value> list = Arrays.asList(new Value[] {whatever01Contact, whatever02Contact, violet07Contact});
+		
+		ValueSet fallback = new ValueSet(new HashSet<>(list), TypePrimitive.CONTACT);
+		ZMI zmi = ZMIHierarchyBuilder.createHierarchyForNodeSelectionTest(); // ZMIHierarchyBuilder.createLeafNodeHierarchy(name); 
+		NodeSelector selector = NodeSelector.createByName("roundRobinExponential", name, NodeSelector.DEFAULT_SELECT_FALLBACK_PROBABILITY);
+		
+		HashMap<String, Integer> nodeCount = new HashMap<>();
+		for (int i = 0; i < numRepeats; i++) {
+			ValueContact contact = selector.selectNode(zmi, fallback);
+			String nodeName = contact.getName().getName();
+			nodeCount.compute(nodeName, (k, v) -> (v == null) ? 1 : v + 1);
+			System.out.println(i + ": "+ contact);	
+		}
+		for (Entry<String, Integer> entry : nodeCount.entrySet()) {
+			System.out.println(entry.getKey() + " : " + entry.getValue());
+		}
 	}
 }

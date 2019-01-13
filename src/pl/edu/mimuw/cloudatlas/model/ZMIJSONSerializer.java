@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
 import org.json.JSONArray;
 import org.json.JSONObject;
 // JSON "docs": 
@@ -86,8 +87,10 @@ public class ZMIJSONSerializer {
 					// two steps, because we want to add both or neither
 					String name = ((ValueContact)v).getName().toString();
 					String address = ((ValueContact)v).getAddress().toString();
+					int port = ((ValueContact)v).getPort();
 					obj.put("n", name);
 					obj.put("a", address);
+					obj.put("p", port);
 				}
 				catch (NullPointerException ex) {}
 				break;
@@ -151,6 +154,16 @@ public class ZMIJSONSerializer {
 				}
 				catch (NullPointerException ex) {}
 				break;
+			case "WRAPPER":
+				try {
+					// two steps, because we want to add both or neither
+					Value value = ((ValueAndFreshness)v).getValue();
+					Value freshness = ((ValueAndFreshness)v).getFreshness();
+					obj.put("v", valueToJSON(value));
+					obj.put("t", valueToJSON(freshness));
+				}
+				catch (NullPointerException ex) {}
+				break;
 			default:
 				throw new IllegalArgumentException("Invalid Value type!");
 		}
@@ -178,7 +191,7 @@ public class ZMIJSONSerializer {
 							address = address.substring(0, sepPos);
 						}
 					}
-					return new ValueContact(new PathName(obj.getString("n")), InetAddress.getByName(address));
+					return new ValueContact(new PathName(obj.getString("n")), InetAddress.getByName(address), obj.getInt("p"));
 				}
 				catch (UnknownHostException ex) {}
 				break;
@@ -220,6 +233,12 @@ public class ZMIJSONSerializer {
 			case "t": // time
 				// assert ValueTime(obj["p"]) == ValueTime(obj["v"])
 				return new ValueTime(obj.has("v") ? (long) obj.getLong("v") : null);
+			case "w": { // wrapper (ValueAndFreshness)
+				Value value = JSONToValue(obj.getJSONObject("v"));
+				ValueTime freshness = (ValueTime)JSONToValue(obj.getJSONObject("t"));
+				return new ValueAndFreshness(value, freshness);
+			}
+			
 			default:
 				throw new RuntimeException("Invalid Value type!");
 		}
@@ -239,6 +258,7 @@ public class ZMIJSONSerializer {
 			case "se": return new TypeCollection(Type.PrimaryType.SET, stringToType(str.substring("se|".length())));
 			case "st": return TypePrimitive.STRING;
 			case "t": return TypePrimitive.TIME;
+			case "w": return new TypeWrapper(stringToType(str.substring("w|".length())));
 			default:
 				throw new IllegalArgumentException("Unknown type!");
 		}
@@ -256,8 +276,24 @@ public class ZMIJSONSerializer {
 			case "SET": return "se|" + typeToString(((TypeCollection)t).getElementType());
 			case "STRING": return "st";
 			case "TIME": return "t";
+			case "WRAPPER": return "w|" + typeToString(((TypeWrapper)t).getNestedType());
 			default:
 				throw new IllegalArgumentException("Unknown type!");
 		}
+	}
+	
+	public static String allQueriesToJSONString(HashMap<Attribute, Query> queries) {
+		JSONArray arr = new JSONArray();
+		
+		for (Entry<Attribute, Query> q : queries.entrySet()) {
+			JSONObject obj = new JSONObject();
+			obj.put("name", q.getKey().getName());
+			obj.put("text", q.getValue().getText());
+			obj.put("signature", q.getValue().getSignature());
+			obj.put("freshness", q.getValue().getFreshness().getValue());
+			arr.put(obj);
+		}
+		
+		return arr.toString();
 	}
 }

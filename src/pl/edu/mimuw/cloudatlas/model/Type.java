@@ -35,7 +35,7 @@ public abstract class Type implements Serializable {
 	 * be parameterized with a type of stored values.
 	 */
 	public static enum PrimaryType implements Serializable {
-		BOOLEAN, CONTACT, DOUBLE, DURATION, INT, LIST, NULL, SET, STRING, TIME,
+		BOOLEAN, CONTACT, DOUBLE, DURATION, INT, LIST, NULL, SET, STRING, TIME, WRAPPER
 	}
 	
 	private final PrimaryType primaryType;

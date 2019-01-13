@@ -8,7 +8,11 @@ package pl.edu.mimuw.cloudatlas.agent;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.HashMap;
+import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
+import pl.edu.mimuw.cloudatlas.model.Query;
+import pl.edu.mimuw.cloudatlas.model.ValueAndFreshness;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
@@ -40,6 +44,8 @@ public interface CloudAtlasInterface extends Remote {
 	public void installQueries(ValueList queryNames, ValueList queries, ValueList signatures) throws RemoteException;
 	
 	public void uninstallQueries(ValueList queryNames, ValueList signatures) throws RemoteException;
+	
+	public HashMap<Attribute, Query> getAllQueries() throws RemoteException;
 
 	public void setFallbackContacts(ValueSet contacts) throws RemoteException;
 	

@@ -19,19 +19,25 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import org.json.JSONObject;
 import pl.edu.mimuw.cloudatlas.agent.CloudAtlasInterface;
+import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.AttributesMap;
+import pl.edu.mimuw.cloudatlas.model.Query;
 import pl.edu.mimuw.cloudatlas.model.TypePrimitive;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueSet;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ZMIJSONSerializer;
+import pl.edu.mimuw.cloudatlas.rmiutils.RmiWithAutoRecovery;
 import pl.edu.mimuw.cloudatlas.signer.QueryOperation;
 import pl.edu.mimuw.cloudatlas.signer.SignerInterface;
 
@@ -40,15 +46,23 @@ import pl.edu.mimuw.cloudatlas.signer.SignerInterface;
  * @author mrowqa
  */
 public class WebClient {
-	private final CloudAtlasInterface zmiRmi;
-	private final SignerInterface signerRmi;
+	private final RmiWithAutoRecovery<CloudAtlasInterface> zmiRmi;
+	private final RmiWithAutoRecovery<SignerInterface> signerRmi;
 	private final HistoricalDataStorage dataStorage;
-	private final static int httpPort = 8000;
+	private final int httpPort;
+	private final JSONObject config;
 	
-	public WebClient(HistoricalDataStorage dataStorage, CloudAtlasInterface zmiRmi, SignerInterface signerRmi) {
+	public WebClient(HistoricalDataStorage dataStorage, JSONObject config) throws RemoteException, NotBoundException {
 		this.dataStorage = dataStorage;
-		this.zmiRmi = zmiRmi;
-		this.signerRmi = signerRmi;
+		this.config = config;
+		this.httpPort = config.getInt("httpPort");
+		
+		this.zmiRmi = new RmiWithAutoRecovery<>(
+				config.getString("agentRegistryHost"),
+				"CloudAtlas" + config.getString("name"));
+		this.signerRmi = new RmiWithAutoRecovery<>(
+				config.getString("signerRegistryHost"),
+				"CloudAtlasSigner");
 	}
 	
 	public void run() throws IOException {
@@ -57,7 +71,9 @@ public class WebClient {
 		server.createContext("/static", new GetStaticFileHandler());
 		server.createContext("/query/install", new InstallQueryHandler());
 		server.createContext("/query/uninstall", new UninstallQueryHandler());
+		server.createContext("/query/get", new GetAllQueriesHandler());
 		server.createContext("/zones/get", new GetZonesHandler());
+		server.createContext("/zones/local-name", new LocalZoneNameHandler());
 		server.createContext("/zones/attributes/get", new GetZoneAttributesHandler());
 		server.createContext("/zones/attributes/set", new SetZoneAttributesHandler());
 		server.createContext("/fallback-contacts/get", new GetFallbackContactsHandler());
@@ -114,7 +130,8 @@ public class WebClient {
 			String rmiResult;
 			int statusCode = 200;
 			try {
-				rmiResult = ZMIJSONSerializer.valueToJSONString(zmiRmi.getZones());
+				ValueList zones = zmiRmi.callWithAutoRecovery(rmi -> rmi.getZones());
+				rmiResult = ZMIJSONSerializer.valueToJSONString(zones);
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -122,6 +139,17 @@ public class WebClient {
 			}
 			
 			WebClient.sendResponse(t, statusCode, rmiResult);
+		}
+	}
+	
+	private class LocalZoneNameHandler implements HttpHandler {
+		@Override
+		public void handle(HttpExchange t) throws IOException {
+			if (!t.getRequestMethod().equals("GET")) {
+				return;
+			}
+			
+			WebClient.sendResponse(t, 200, config.getString("name"));
 		}
 	}
 	
@@ -138,7 +166,9 @@ public class WebClient {
 			String rmiResult;
 			try {
 				ValueString zoneName = new ValueString(params.get("zone-name"));
-				rmiResult = ZMIJSONSerializer.attributesMapToJSONString(zmiRmi.getZoneAttributes(zoneName));
+				AttributesMap zoneAttributesMap = zmiRmi.callWithAutoRecovery(
+						rmi -> rmi.getZoneAttributes(zoneName));
+				rmiResult = ZMIJSONSerializer.attributesMapToJSONString(zoneAttributesMap);
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -162,7 +192,10 @@ public class WebClient {
 			try {
 				ValueString zoneName = new ValueString(params.get("zone-name"));
 				AttributesMap attrs = ZMIJSONSerializer.JSONStringToAttributesMap(params.get("zone-attrs"));
-				zmiRmi.setZoneAttributes(zoneName, attrs);
+				zmiRmi.callWithAutoRecovery(rmi -> {
+					rmi.setZoneAttributes(zoneName, attrs);
+					return null;
+				});
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -181,7 +214,8 @@ public class WebClient {
 			
 			String rmiResult;
 			try {
-				rmiResult = ZMIJSONSerializer.valueToJSONString(zmiRmi.getFallbackContacts());
+				ValueSet fallbackContacts = zmiRmi.callWithAutoRecovery(rmi -> rmi.getFallbackContacts());
+				rmiResult = ZMIJSONSerializer.valueToJSONString(fallbackContacts);
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -203,8 +237,11 @@ public class WebClient {
 			
 			String rmiResult = "OK";
 			try {
-				ValueSet contacts = (ValueSet) ZMIJSONSerializer.JSONStringToValue(params.get("contacts"));
-				zmiRmi.setFallbackContacts(contacts);
+				ValueSet contacts = (ValueSet) ZMIJSONSerializer.JSONStringToValue(params.get("contacts"));				
+				zmiRmi.callWithAutoRecovery(rmi -> {
+					rmi.setFallbackContacts(contacts);
+					return null;
+				});
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -229,7 +266,7 @@ public class WebClient {
 			String rmiResult = "OK";
 			try {
 				QueryOperation queryOp = QueryOperation.newQueryInstall(queryName, queryText);
-				String signature = signerRmi.signQueryOperation(queryOp);
+				String signature = signerRmi.callWithAutoRecovery(rmi -> rmi.signQueryOperation(queryOp));
 
 				List<Value> queryNamesRawList = Arrays.asList(new Value[] { new ValueString(queryName) });
 				ValueList queryNames = new ValueList(queryNamesRawList, TypePrimitive.STRING);
@@ -238,7 +275,10 @@ public class WebClient {
 				List<Value> signaturesRawList = Arrays.asList(new Value[] { new ValueString(signature) });
 				ValueList signatures = new ValueList(signaturesRawList, TypePrimitive.STRING);
 
-				zmiRmi.installQueries(queryNames, queries, signatures);
+				zmiRmi.callWithAutoRecovery(rmi -> {
+					rmi.installQueries(queryNames, queries, signatures);
+					return null;
+				});
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
@@ -263,20 +303,44 @@ public class WebClient {
 			String rmiResult = "OK";
 			try {
 				QueryOperation queryOp = QueryOperation.newQueryUninstall(queryName);
-				String signature = signerRmi.signQueryOperation(queryOp);
+				String signature = signerRmi.callWithAutoRecovery(rmi -> rmi.signQueryOperation(queryOp));
 
 				List<Value> queryNamesRawList = Arrays.asList(new Value[] { new ValueString(queryName) });
 				ValueList queryNames = new ValueList(queryNamesRawList, TypePrimitive.STRING);
 				List<Value> signaturesRawList = Arrays.asList(new Value[] { new ValueString(signature) });
 				ValueList signatures = new ValueList(signaturesRawList, TypePrimitive.STRING);
 
-				zmiRmi.uninstallQueries(queryNames, signatures);
+				zmiRmi.callWithAutoRecovery(rmi -> {
+					rmi.uninstallQueries(queryNames, signatures);
+					return null;
+				});
 			}
 			catch (Exception ex) {
 				rmiResult = "Error:\n" + exceptionToString(ex);
 			}
 
 			// ok, we are ready to send the response.
+			WebClient.sendResponse(t, 200, rmiResult);
+		}
+	}
+	
+	private class GetAllQueriesHandler implements HttpHandler {
+		@Override
+		public void handle(HttpExchange t) throws IOException {
+			if (!t.getRequestMethod().equals("GET")) {
+				return;
+			}
+			
+			String rmiResult;
+			try {
+				HashMap<Attribute, Query> allQueries =
+						zmiRmi.callWithAutoRecovery(rmi -> rmi.getAllQueries());
+				rmiResult = ZMIJSONSerializer.allQueriesToJSONString(allQueries);
+			}
+			catch (Exception ex) {
+				rmiResult = "Error:\n" + exceptionToString(ex);
+			}
+			
 			WebClient.sendResponse(t, 200, rmiResult);
 		}
 	}

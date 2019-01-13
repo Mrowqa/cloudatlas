@@ -34,7 +34,7 @@ import java.util.Map.Entry;
  * Represents a map from <code>Attribute</code> to <code>Value</code>. It cannot contain duplicate keys.
  */
 public class AttributesMap implements Iterable<Entry<Attribute, Value>>, Cloneable, Serializable {
-	private Map<Attribute, Value> map = new HashMap<Attribute, Value>();
+	private final Map<Attribute, Value> map = new HashMap<>();
 	
 	private void checkNulls(Attribute attribute, Value value) {
 		if(attribute == null)
@@ -42,6 +42,10 @@ public class AttributesMap implements Iterable<Entry<Attribute, Value>>, Cloneab
 		if(value == null)
 			throw new NullPointerException(
 					"The value cannot be null. You may want create a Value object that contains null.");
+	}
+	
+	public void clear() {
+		map.clear();
 	}
 	
 	/**
