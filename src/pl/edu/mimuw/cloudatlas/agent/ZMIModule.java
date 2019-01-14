@@ -70,7 +70,7 @@ public class ZMIModule extends Thread implements Module {
 
 	private ValueAndFreshness fallbackContacts;
 	private Duration queryExecutionInterval = Duration.ofSeconds(5);
-	private Duration removeOutdatedZonesInterval = Duration.ofSeconds(60); // Interval between two events of removing outdated zones
+	private Duration outdatedZonesRemovalInterval = Duration.ofSeconds(60); // Interval between two events of removing outdated zones
 	private Duration zoneLivenessDuration = Duration.ofSeconds(60); // Duration after a zone become outdated
 	private int contactsPerNode = 2;
 	private ModulesHandler modulesHandler;
@@ -85,8 +85,8 @@ public class ZMIModule extends Thread implements Module {
 		findZone(zmi, name).getAttributes().add("contacts", localContacts);
 		if (config.has("queryExecutionInterval"))
 			module.queryExecutionInterval = ConfigUtils.parseInterval(config.getString("queryExecutionInterval"));
-		if (config.has("removeOutdatedZonesInterval"))
-			module.removeOutdatedZonesInterval = ConfigUtils.parseInterval(config.getString("removeOutdatedZonesInterval"));
+		if (config.has("outdatedZonesRemovalInterval"))
+			module.outdatedZonesRemovalInterval = ConfigUtils.parseInterval(config.getString("outdatedZonesRemovalInterval"));
 		if (config.has("zoneLivenessDuration"))
 			module.zoneLivenessDuration = ConfigUtils.parseInterval(config.getString("zoneLivenessDuration"));
 		if (config.has("contactsPerNode"))
@@ -493,7 +493,7 @@ public class ZMIModule extends Thread implements Module {
 	
 	private void scheduleRemoveOutdatedZonesRecurringEvent() throws InterruptedException {
 		ZMIMessage innerMsg = ZMIMessage.removeOutdatedZones();
-		TimerMessage msg = TimerMessage.scheduleRecurringCallback(random.nextLong(), removeOutdatedZonesInterval, innerMsg);
+		TimerMessage msg = TimerMessage.scheduleRecurringCallback(random.nextLong(), outdatedZonesRemovalInterval, innerMsg);
 		modulesHandler.enqueue(msg);
 	}
 	
