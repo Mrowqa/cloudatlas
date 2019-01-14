@@ -71,7 +71,7 @@ public class ZMIModule extends Thread implements Module {
 	private ValueAndFreshness fallbackContacts;
 	private Duration queryExecutionInterval = Duration.ofSeconds(5);
 	private Duration removeOutdatedZonesInterval = Duration.ofSeconds(60); // Interval between two events of removing outdated zones
-	private Duration zoneOutdatedDuration = Duration.ofSeconds(60); // Duration after a zone become outdated
+	private Duration zoneLivenessDuration = Duration.ofSeconds(60); // Duration after a zone become outdated
 	private int contactsPerNode = 2;
 	private ModulesHandler modulesHandler;
 
@@ -87,8 +87,8 @@ public class ZMIModule extends Thread implements Module {
 			module.queryExecutionInterval = ConfigUtils.parseInterval(config.getString("queryExecutionInterval"));
 		if (config.has("removeOutdatedZonesInterval"))
 			module.removeOutdatedZonesInterval = ConfigUtils.parseInterval(config.getString("removeOutdatedZonesInterval"));
-		if (config.has("zoneOutdatedDuration"))
-			module.zoneOutdatedDuration = ConfigUtils.parseInterval(config.getString("zoneOutdatedDuration"));
+		if (config.has("zoneLivenessDuration"))
+			module.zoneLivenessDuration = ConfigUtils.parseInterval(config.getString("zoneLivenessDuration"));
 		if (config.has("contactsPerNode"))
 			module.contactsPerNode = config.getInt("contactsPerNode");
 		if (config.has("queries")) {
@@ -559,7 +559,7 @@ public class ZMIModule extends Thread implements Module {
 	}
 	
 	private ValueTime getZoneOutdatedThreshold() {
-		return (ValueTime)ValueTime.now().subtract(new ValueDuration(0, zoneOutdatedDuration.toMillis()));
+		return (ValueTime)ValueTime.now().subtract(new ValueDuration(0, zoneLivenessDuration.toMillis()));
 	}
 	
 	private void updateOurContactTimestamp() {
