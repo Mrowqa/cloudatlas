@@ -358,7 +358,9 @@ class PartiallyConstructedModuleMessage {
 		long timesAvgFirst = timesSum / timesIncluded;
 
 		for (long d : times) {
-			if (d > timesAvgFirst * FILTERING_FACTOR) { // >= for only zeros filters everything out and causes later division by zero "/ timesIncluded"
+			// d could be negative or zero and cause later division by zero "/ timesIncluded",
+			// that's why we ensure that timesIncluded is at least 1
+			if (timesIncluded > 1 && d > timesAvgFirst * FILTERING_FACTOR) {
 				timesSum -= d;
 				timesIncluded--;
 			}
