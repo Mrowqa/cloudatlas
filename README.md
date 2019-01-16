@@ -74,6 +74,9 @@ private-key: key used for signing queries operations,
 database: signer synchronizes its state with a SQLite database,
           default is `signer.db`
 
+Note: it's recommended to make sure specified database does exist, even
+      if using default database; we experienced strange behaviour in labs
+
 #### WebClient
 
 WebClient provides a web interface to interact with CloudAtlas. It does also
