@@ -1,3 +1,8 @@
+This is an university project for distributed systems class. I have uploaded
+the repository with an original code modifying only this README. The project
+had been developed in a pair with a classmate and with code review.
+
+
 CloudAtlas
 ==========
 
